@@ -9,10 +9,11 @@ export default function Ranking() {
     (async () => {
       setErr("");
       const { data, error } = await supabase
-        .from("profiles")
-        .select("full_name, points")
-        .order("points", { ascending: false })
-        .limit(50);
+      .from("v_leaderboard_public")
+      .select("full_name, points")
+      .order("points", { ascending: false })
+      .limit(50);
+    
 
       if (error) setErr(error.message);
       setRows(data ?? []);
