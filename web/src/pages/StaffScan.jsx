@@ -26,6 +26,12 @@ console.log("SCANNING AS:", me?.user?.id);
       setStatus("❌ " + error.message);
       return;
     }
+    await supabase.from("notifications").insert({
+      user_id: userId,
+      title: "Asistencia registrada",
+      body: "Tu asistencia fue registrada. Revisa tus puntos en la credencial."
+    });
+    
 
     const newPoints = data?.[0]?.new_points;
     setStatus(`✅ Check-in OK. Nuevos puntos: ${newPoints ?? "?"}`);

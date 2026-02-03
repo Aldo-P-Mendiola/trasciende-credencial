@@ -2,9 +2,11 @@ import { useEffect, useState } from "react";
 import { Routes, Route, Link, Navigate } from "react-router-dom";
 import { supabase } from "./lib/supabase";
 
+import NotificationsBell from "./components/NotificationsBell";
 import Login from "./pages/Login";
 import Home from "./pages/Home";
 import Events from "./pages/Events";
+import Credencial from "./pages/Credencial";
 import Ranking from "./pages/Ranking";
 import StaffScan from "./pages/StaffScan";
 
@@ -50,6 +52,9 @@ export default function App() {
           <Link to="/events">Eventos</Link>
           <Link to="/ranking">Ranking</Link>
           {(role === "staff" || role === "admin") && <Link to="/staff">Staff</Link>}
+          <NotificationsBell />
+<button onClick={logout}>Salir</button>
+
           <button onClick={logout}>Salir</button>
         </nav>
       </header>
@@ -57,15 +62,16 @@ export default function App() {
       <hr style={{ margin: "16px 0" }} />
 
       <Routes>
-        <Route path="/" element={<Home />} />
-        <Route path="/events" element={<Events />} />
-        <Route path="/ranking" element={<Ranking />} />
-        <Route
-          path="/staff"
-          element={role === "staff" || role === "admin" ? <StaffScan /> : <Navigate to="/" />}
-        />
-        <Route path="*" element={<Navigate to="/" />} />
-      </Routes>
+  <Route path="/" element={<Credencial />} />
+  <Route path="/events" element={<Events />} />
+  <Route path="/ranking" element={<Ranking />} />
+  <Route
+    path="/staff"
+    element={role === "staff" || role === "admin" ? <StaffScan /> : <Navigate to="/" />}
+  />
+  <Route path="*" element={<Navigate to="/" />} />
+</Routes>
+
     </div>
   );
 }
