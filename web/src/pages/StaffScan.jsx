@@ -10,7 +10,10 @@ export default function StaffScan() {
 
   const qrRegionId = "qr-reader-region";
   const scannerRef = useRef(null);
-  const cooldownRef = useRef(false);
+
+  // anti-spam / dedupe
+  const processingRef = useRef(false);
+  const lastRef = useRef({ userId: null, eventId: null, ts: 0 });
 
   useEffect(() => {
     (async () => {
@@ -53,11 +56,35 @@ export default function StaffScan() {
         { facingMode: "environment" },
         { fps: 10, qrbox: { width: 250, height: 250 } },
         async (decodedText) => {
-          if (cooldownRef.current) return;
-          cooldownRef.current = true;
-          setTimeout(() => (cooldownRef.current = false), 1200);
+          if (processingRef.current) return;
 
-          await registerCheckin(decodedText);
+          // parsea userId
+          let userId = null;
+          try {
+            userId = JSON.parse(decodedText)?.userId ?? null;
+          } catch {
+            // si no es JSON, registerCheckin lo manejará
+          }
+
+          // dedupe 6s mismo user+evento
+          const now = Date.now();
+          const same =
+            lastRef.current.userId === userId &&
+            lastRef.current.eventId === eventId;
+          const within = now - lastRef.current.ts < 6000;
+
+          if (same && within) return;
+
+          lastRef.current = { userId, eventId, ts: now };
+
+          processingRef.current = true;
+          try {
+            await registerCheckin(decodedText);
+          } finally {
+            setTimeout(() => {
+              processingRef.current = false;
+            }, 1200);
+          }
         }
       );
 
@@ -97,12 +124,19 @@ export default function StaffScan() {
       const userId = parsed?.userId;
       if (!userId) throw new Error("QR inválido (sin userId).");
 
+      // RPC (registra checkin + calcula puntos en DB)
       const { data, error } = await supabase.rpc("register_checkin", {
         p_event_id: eventId,
         p_user_id: userId,
       });
 
       if (error) {
+        const msg = String(error.message || "").toLowerCase();
+        // si el backend marca duplicate/conflict, no notifiques
+        if (msg.includes("duplicate") || msg.includes("conflict") || msg.includes("already")) {
+          setStatus("⚠️ Ya estaba registrado en este evento.");
+          return;
+        }
         setStatus("❌ " + error.message);
         return;
       }

@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Routes, Route, Link, Navigate } from "react-router-dom";
 import { supabase } from "./lib/supabase";
 
+import StaffNotifications from "./pages/StaffNotifications";
 import NotificationsBell from "./components/NotificationsBell";
 import Login from "./pages/Login";
 import Home from "./pages/Home";
@@ -65,6 +66,7 @@ export default function App() {
     {(role === "staff" || role === "admin") && (
       <Link style={{ color: "#cacbd3", textDecoration: "none" }} to="/staff">Staff</Link>
     )}
+{(role === "staff" || role === "admin") && <Link to="/staff-notifs">Notifs</Link>}
 
     <NotificationsBell />
 
@@ -96,6 +98,11 @@ export default function App() {
     path="/staff"
     element={role === "staff" || role === "admin" ? <StaffScan /> : <Navigate to="/" />}
   />
+  <Route
+  path="/staff-notifs"
+  element={role === "staff" || role === "admin" ? <StaffNotifications /> : <Navigate to="/" />}
+/>
+
   <Route path="*" element={<Navigate to="/" />} />
 </Routes>
 

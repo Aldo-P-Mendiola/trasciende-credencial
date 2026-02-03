@@ -19,6 +19,8 @@ export default function Credencial() {
   );
 
   useEffect(() => {
+    let channel = null;
+
     (async () => {
       setLoading(true);
 
@@ -29,7 +31,21 @@ export default function Credencial() {
         return;
       }
 
-      // 1) QR (para que staff escanee al estudiante)
+      async function loadPoints(uid) {
+        const { data: pts, error: ptsErr } = await supabase
+          .from("v_user_points")
+          .select("points")
+          .eq("user_id", uid)
+          .maybeSingle();
+
+        if (ptsErr) console.log("points error:", ptsErr.message);
+
+        setProfile((prev) =>
+          prev ? { ...prev, points: pts?.points ?? prev.points } : prev
+        );
+      }
+
+      // 1) QR
       const payload = JSON.stringify({ userId: me.id });
       const url = await QRCode.toDataURL(payload, { margin: 1, scale: 8 });
       setQr(url);
@@ -43,48 +59,40 @@ export default function Credencial() {
 
       if (pErr) console.log("profiles error:", pErr.message);
 
-      // 3) Puntos desde la view calculada (recomendado)
-      const { data: pts, error: ptsErr } = await supabase
-        .from("v_user_points")
-        .select("points")
-        .eq("user_id", me.id)
-        .maybeSingle();
-
-      if (ptsErr) console.log("points error:", ptsErr.message);
-
+      // 3) set inicial
       setProfile({
         full_name: p?.full_name ?? "—",
         email: p?.email ?? me.email ?? "—",
         role: p?.role ?? "student",
-        points: pts?.points ?? 0,
+        points: 0,
       });
+
+      // 4) puntos iniciales
+      await loadPoints(me.id);
+
+      // 5) “push”: al llegar notif personal, refresca puntos
+      channel = supabase
+        .channel("cred-points-" + me.id)
+        .on(
+          "postgres_changes",
+          {
+            event: "INSERT",
+            schema: "public",
+            table: "notifications",
+            filter: `user_id=eq.${me.id}`,
+          },
+          async () => {
+            await loadPoints(me.id);
+          }
+        )
+        .subscribe();
 
       setLoading(false);
     })();
-  }, []);
 
-  // (Opcional pro) refrescar puntos cada 5s para ver el cambio “en vivo”
-  useEffect(() => {
-    let t = null;
-    (async () => {
-      const { data: u } = await supabase.auth.getUser();
-      const me = u?.user;
-      if (!me) return;
-
-      t = setInterval(async () => {
-        const { data: pts } = await supabase
-          .from("v_user_points")
-          .select("points")
-          .eq("user_id", me.id)
-          .maybeSingle();
-
-        setProfile((prev) =>
-          prev ? { ...prev, points: pts?.points ?? prev.points } : prev
-        );
-      }, 5000);
-    })();
-
-    return () => t && clearInterval(t);
+    return () => {
+      if (channel) supabase.removeChannel(channel);
+    };
   }, []);
 
   async function downloadCredencial() {
@@ -94,10 +102,7 @@ export default function Credencial() {
       const node = document.getElementById("credencial");
       if (!node) throw new Error("No encontré el contenedor de la credencial.");
 
-      const dataUrl = await toPng(node, {
-        cacheBust: true,
-        pixelRatio: 2,
-      });
+      const dataUrl = await toPng(node, { cacheBust: true, pixelRatio: 2 });
 
       const link = document.createElement("a");
       link.download = "credencial-trasciende.png";
@@ -133,7 +138,6 @@ export default function Credencial() {
         </button>
       </div>
 
-      {/* ✅ Esta caja se convierte a imagen */}
       <div
         id="credencial"
         style={{
@@ -146,14 +150,12 @@ export default function Credencial() {
           color: c.gray,
         }}
       >
-        {/* Header */}
         <div style={{ padding: 16, background: "rgba(255,255,255,.06)" }}>
           <div style={{ fontSize: 12, opacity: 0.9 }}>Tecnológico de Monterrey</div>
           <div style={{ fontSize: 20, fontWeight: 900, letterSpacing: 0.2 }}>Programa Trasciende</div>
           <div style={{ marginTop: 8, height: 3, width: 80, background: c.red, borderRadius: 99 }} />
         </div>
 
-        {/* Body */}
         <div style={{ padding: 16, display: "grid", gridTemplateColumns: "1fr 260px", gap: 14 }}>
           <div>
             <div style={{ fontSize: 18, fontWeight: 900, color: "white" }}>
@@ -204,7 +206,6 @@ export default function Credencial() {
           </div>
         </div>
 
-        {/* Footer */}
         <div
           style={{
             padding: 14,
