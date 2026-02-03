@@ -1,3 +1,4 @@
+export default function StaffScan() {
 async function registerCheckin(payloadStr) {
 const { data: me } = await supabase.auth.getUser();
 console.log("SCANNING AS:", me?.user?.id);
@@ -39,4 +40,4 @@ console.log("SCANNING AS:", me?.user?.id);
     setStatus("Error: " + e.message);
   }
 }
-
+}

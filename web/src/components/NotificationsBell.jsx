@@ -11,12 +11,18 @@ export default function NotificationsBell() {
     const uid = me?.user?.id;
     if (!uid) return;
 
-    const { data } = await supabase
-      .from("notifications")
-      .select("id,title,body,read,created_at")
-      .eq("user_id", uid)
-      .order("created_at", { ascending: false })
-      .limit(20);
+    const { data, error } = await supabase
+    .from("notifications")
+    .select("id,title,body,read,created_at")
+    .eq("user_id", uid)
+    .order("created_at", { ascending: false })
+    .limit(20);
+  
+  if (error) {
+    console.log("NOTIFS ERROR:", error);
+    return;
+  }
+  
 
     const list = data ?? [];
     setItems(list);
