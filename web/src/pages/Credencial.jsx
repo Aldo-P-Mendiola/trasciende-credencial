@@ -18,59 +18,26 @@ export default function Credencial() {
     []
   );
 
+  // Carga inicial: perfil + QR + puntos
   useEffect(() => {
-    let channel = null;
-    let t = null;
-  
     (async () => {
+      setLoading(true);
+
       const { data: u } = await supabase.auth.getUser();
       const me = u?.user;
-      if (!me) return;
-  
-      async function loadPoints() {
-        const { data: pts, error } = await supabase
-          .from("v_user_points")
-          .select("points")
-          .eq("user_id", me.id)
-          .maybeSingle();
-  
-        if (error) console.log("POINTS ERROR:", error.message);
-  
-        setProfile((prev) =>
-          prev ? { ...prev, points: pts?.points ?? prev.points } : prev
-        );
+      if (!me) {
+        setLoading(false);
+        return;
       }
-  
-      // refresco inicial
-      await loadPoints();
-  
-      // “push”: al llegar notif personal, refresca puntos
-      channel = supabase
-        .channel("cred-points-" + me.id)
-        .on(
-          "postgres_changes",
-          { event: "INSERT", schema: "public", table: "notifications", filter: `user_id=eq.${me.id}` },
-          async () => {
-            await loadPoints();
-          }
-        )
-        .subscribe();
-  
-      // fallback por si el callback no corre en algún móvil
-      t = setInterval(loadPoints, 10000);
-    })();
-  
-    return () => {
-      if (channel) supabase.removeChannel(channel);
-      if (t) clearInterval(t);
-    };
-  }, []);
-  
 
-      // 1) QR
-      const payload = JSON.stringify({ userId: me.id });
-      const url = await QRCode.toDataURL(payload, { margin: 1, scale: 8 });
-      setQr(url);
+      // 1) QR (para que staff escanee al estudiante)
+      try {
+        const payload = JSON.stringify({ userId: me.id });
+        const url = await QRCode.toDataURL(payload, { margin: 1, scale: 8 });
+        setQr(url);
+      } catch (e) {
+        console.log("QR ERROR:", e);
+      }
 
       // 2) Perfil base
       const { data: p, error: pErr } = await supabase
@@ -81,18 +48,51 @@ export default function Credencial() {
 
       if (pErr) console.log("profiles error:", pErr.message);
 
-      // 3) set inicial
+      // 3) Puntos desde view calculada
+      const { data: pts, error: ptsErr } = await supabase
+        .from("v_user_points")
+        .select("points")
+        .eq("user_id", me.id)
+        .maybeSingle();
+
+      if (ptsErr) console.log("points error:", ptsErr.message);
+
       setProfile({
         full_name: p?.full_name ?? "—",
         email: p?.email ?? me.email ?? "—",
         role: p?.role ?? "student",
-        points: 0,
+        points: pts?.points ?? 0,
       });
 
-      // 4) puntos iniciales
-      await loadPoints(me.id);
+      setLoading(false);
+    })();
+  }, []);
 
-      // 5) “push”: al llegar notif personal, refresca puntos
+  // Refresco de puntos: realtime por NOTIFICATIONS + fallback cada 10s
+  useEffect(() => {
+    let channel = null;
+    let t = null;
+
+    (async () => {
+      const { data: u } = await supabase.auth.getUser();
+      const me = u?.user;
+      if (!me) return;
+
+      async function loadPoints() {
+        const { data: pts, error } = await supabase
+          .from("v_user_points")
+          .select("points")
+          .eq("user_id", me.id)
+          .maybeSingle();
+
+        if (error) console.log("POINTS ERROR:", error.message);
+
+        setProfile((prev) =>
+          prev ? { ...prev, points: pts?.points ?? prev.points } : prev
+        );
+      }
+
+      // cuando llegue notif personal -> refresca puntos
       channel = supabase
         .channel("cred-points-" + me.id)
         .on(
@@ -104,16 +104,18 @@ export default function Credencial() {
             filter: `user_id=eq.${me.id}`,
           },
           async () => {
-            await loadPoints(me.id);
+            await loadPoints();
           }
         )
         .subscribe();
 
-      setLoading(false);
+      // fallback
+      t = setInterval(loadPoints, 10000);
     })();
 
     return () => {
       if (channel) supabase.removeChannel(channel);
+      if (t) clearInterval(t);
     };
   }, []);
 
@@ -124,14 +126,17 @@ export default function Credencial() {
       const node = document.getElementById("credencial");
       if (!node) throw new Error("No encontré el contenedor de la credencial.");
 
-      const dataUrl = await toPng(node, { cacheBust: true, pixelRatio: 2 });
+      const dataUrl = await toPng(node, {
+        cacheBust: true,
+        pixelRatio: 2,
+      });
 
       const link = document.createElement("a");
       link.download = "credencial-trasciende.png";
       link.href = dataUrl;
       link.click();
     } catch (e) {
-      alert("No pude descargar la credencial: " + e.message);
+      alert("No pude descargar la credencial: " + (e?.message ?? String(e)));
     } finally {
       setDownloading(false);
     }
@@ -172,12 +177,14 @@ export default function Credencial() {
           color: c.gray,
         }}
       >
+        {/* Header */}
         <div style={{ padding: 16, background: "rgba(255,255,255,.06)" }}>
           <div style={{ fontSize: 12, opacity: 0.9 }}>Tecnológico de Monterrey</div>
           <div style={{ fontSize: 20, fontWeight: 900, letterSpacing: 0.2 }}>Programa Trasciende</div>
           <div style={{ marginTop: 8, height: 3, width: 80, background: c.red, borderRadius: 99 }} />
         </div>
 
+        {/* Body */}
         <div style={{ padding: 16, display: "grid", gridTemplateColumns: "1fr 260px", gap: 14 }}>
           <div>
             <div style={{ fontSize: 18, fontWeight: 900, color: "white" }}>
@@ -228,6 +235,7 @@ export default function Credencial() {
           </div>
         </div>
 
+        {/* Footer */}
         <div
           style={{
             padding: 14,
