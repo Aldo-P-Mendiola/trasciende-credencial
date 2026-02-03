@@ -44,20 +44,47 @@ export default function App() {
 
   return (
     <div style={{ maxWidth: 900, margin: "0 auto", padding: 16 }}>
-      <header style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12 }}>
-        <div style={{ fontWeight: 800 }}>Trasciende</div>
+<header
+  style={{
+    display: "flex",
+    justifyContent: "space-between",
+    alignItems: "center",
+    gap: 12,
+    background: "#2a2f58",
+    color: "#cacbd3",
+    padding: "12px 14px",
+    borderRadius: 16,
+  }}
+>
+  <div style={{ fontWeight: 900, letterSpacing: 0.3 }}>Trasciende</div>
 
-        <nav style={{ display: "flex", gap: 12, alignItems: "center" }}>
-          <Link to="/">Credencial</Link>
-          <Link to="/events">Eventos</Link>
-          <Link to="/ranking">Ranking</Link>
-          {(role === "staff" || role === "admin") && <Link to="/staff">Staff</Link>}
-          <NotificationsBell />
-<button onClick={logout}>Salir</button>
+  <nav style={{ display: "flex", gap: 12, alignItems: "center" }}>
+    <Link style={{ color: "#cacbd3", textDecoration: "none" }} to="/">Credencial</Link>
+    <Link style={{ color: "#cacbd3", textDecoration: "none" }} to="/events">Eventos</Link>
+    <Link style={{ color: "#cacbd3", textDecoration: "none" }} to="/ranking">Ranking</Link>
+    {(role === "staff" || role === "admin") && (
+      <Link style={{ color: "#cacbd3", textDecoration: "none" }} to="/staff">Staff</Link>
+    )}
 
-          <button onClick={logout}>Salir</button>
-        </nav>
-      </header>
+    <NotificationsBell />
+
+    <button
+      onClick={logout}
+      style={{
+        background: "#bc3f4a",
+        color: "white",
+        border: "none",
+        borderRadius: 12,
+        padding: "8px 10px",
+        cursor: "pointer",
+        fontWeight: 900,
+      }}
+    >
+      Salir
+    </button>
+  </nav>
+</header>
+
 
       <hr style={{ margin: "16px 0" }} />
 
