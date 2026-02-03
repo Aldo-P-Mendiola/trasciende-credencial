@@ -5,29 +5,33 @@ export default function Ranking() {
   const [rows, setRows] = useState([]);
   const [err, setErr] = useState("");
 
-  useEffect(() => {
-    (async () => {
-      setErr("");
-      const { data, error } = await supabase
+  async function load() {
+    setErr("");
+    const { data, error } = await supabase
       .from("v_leaderboard_public")
-      .select("full_name, points")
+      .select("user_id, full_name, points")
       .order("points", { ascending: false })
       .limit(50);
-    
 
-      if (error) setErr(error.message);
-      setRows(data ?? []);
-    })();
+    if (error) setErr(error.message);
+    setRows(data ?? []);
+  }
+
+  useEffect(() => {
+    load();
+
+    // auto-refresh cada 10s (simple y confiable)
+    const t = setInterval(load, 10000);
+    return () => clearInterval(t);
   }, []);
 
   return (
     <div>
       <h2>Ranking</h2>
       {err && <div style={{ color: "crimson" }}>{err}</div>}
-
       <ol>
-        {rows.map((r, idx) => (
-          <li key={idx}>
+        {rows.map((r) => (
+          <li key={r.user_id}>
             {r.full_name} — <b>{r.points}</b>
           </li>
         ))}
