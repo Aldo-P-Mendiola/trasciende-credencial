@@ -13,7 +13,7 @@ export default function StaffScan() {
 
   // anti-spam / dedupe
   const processingRef = useRef(false);
-  const lastRef = useRef({ userId: null, eventId: null, ts: 0 });
+  const lastRef = useRef({ key: "", ts: 0 });
 
   useEffect(() => {
     (async () => {
@@ -58,29 +58,30 @@ export default function StaffScan() {
         async (decodedText) => {
           if (processingRef.current) return;
 
-          // parsea userId
-          let userId = null;
+          // intenta extraer userId; si no, usa texto crudo como fallback
+          let userId = "";
           try {
-            userId = JSON.parse(decodedText)?.userId ?? null;
+            userId = JSON.parse(decodedText)?.userId ?? "";
           } catch {
-            // si no es JSON, registerCheckin lo manejará
+            userId = "";
           }
 
-          // dedupe 6s mismo user+evento
+          // clave de dedupe robusta
+          const key = `${eventId}::${userId || decodedText}`;
+
           const now = Date.now();
-          const same =
-            lastRef.current.userId === userId &&
-            lastRef.current.eventId === eventId;
-          const within = now - lastRef.current.ts < 6000;
+          const within = now - lastRef.current.ts < 8000; // 8s antispam fuerte
+          const same = lastRef.current.key === key;
 
           if (same && within) return;
 
-          lastRef.current = { userId, eventId, ts: now };
+          lastRef.current = { key, ts: now };
 
           processingRef.current = true;
           try {
             await registerCheckin(decodedText);
           } finally {
+            // suelta el lock después (para que no se dispare en ráfaga)
             setTimeout(() => {
               processingRef.current = false;
             }, 1200);
@@ -124,7 +125,6 @@ export default function StaffScan() {
       const userId = parsed?.userId;
       if (!userId) throw new Error("QR inválido (sin userId).");
 
-      // RPC (registra checkin + calcula puntos en DB)
       const { data, error } = await supabase.rpc("register_checkin", {
         p_event_id: eventId,
         p_user_id: userId,
@@ -132,7 +132,6 @@ export default function StaffScan() {
 
       if (error) {
         const msg = String(error.message || "").toLowerCase();
-        // si el backend marca duplicate/conflict, no notifiques
         if (msg.includes("duplicate") || msg.includes("conflict") || msg.includes("already")) {
           setStatus("⚠️ Ya estaba registrado en este evento.");
           return;
@@ -141,16 +140,28 @@ export default function StaffScan() {
         return;
       }
 
-      // Notificación in-app (campana)
-      const { error: notifErr } = await supabase.from("notifications").insert({
-        user_id: userId,
-        title: "Asistencia registrada",
-        body: "Tu asistencia fue registrada. Revisa tus puntos en la credencial.",
-      });
-      if (notifErr) console.log("NOTIF ERROR:", notifErr.message);
-
+      // Si tu RPC devuelve created/new_points, úsalo:
+      const created = data?.[0]?.created; // (si existe)
       const newPoints = data?.[0]?.new_points;
+
+      // ✅ NOTIF solo si fue un registro nuevo.
+      // Si tu RPC no devuelve created, al menos el dedupe arriba evita spam.
+      if (created !== false) {
+        const { error: notifErr } = await supabase.from("notifications").insert({
+          user_id: userId,
+          title: "Asistencia registrada",
+          body: "Tu asistencia fue registrada. Revisa tus puntos en la credencial.",
+        });
+        if (notifErr) console.log("NOTIF ERROR:", notifErr.message);
+      }
+
       setStatus(`✅ Check-in OK. Nuevos puntos: ${newPoints ?? "?"}`);
+
+      // pausa dura 8s aunque el QR siga en cámara (anti spam)
+      processingRef.current = true;
+      setTimeout(() => {
+        processingRef.current = false;
+      }, 8000);
     } catch (e) {
       console.log("REGISTER ERROR:", e);
       setStatus("Error: " + (e?.message ?? String(e)));
@@ -185,10 +196,6 @@ export default function StaffScan() {
       </div>
 
       <div style={{ marginTop: 10 }}>{status}</div>
-
-      <div style={{ marginTop: 10, fontSize: 12, opacity: 0.8 }}>
-        Tip: en iPhone/Android el escaneo solo funciona bien si la página está en <b>HTTPS</b> (Pages ya lo es).
-      </div>
     </div>
   );
 }

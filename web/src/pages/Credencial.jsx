@@ -20,30 +20,52 @@ export default function Credencial() {
 
   useEffect(() => {
     let channel = null;
-
+    let t = null;
+  
     (async () => {
-      setLoading(true);
-
       const { data: u } = await supabase.auth.getUser();
       const me = u?.user;
-      if (!me) {
-        setLoading(false);
-        return;
-      }
-
-      async function loadPoints(uid) {
-        const { data: pts, error: ptsErr } = await supabase
+      if (!me) return;
+  
+      async function loadPoints() {
+        const { data: pts, error } = await supabase
           .from("v_user_points")
           .select("points")
-          .eq("user_id", uid)
+          .eq("user_id", me.id)
           .maybeSingle();
-
-        if (ptsErr) console.log("points error:", ptsErr.message);
-
+  
+        if (error) console.log("POINTS ERROR:", error.message);
+  
         setProfile((prev) =>
           prev ? { ...prev, points: pts?.points ?? prev.points } : prev
         );
       }
+  
+      // refresco inicial
+      await loadPoints();
+  
+      // “push”: al llegar notif personal, refresca puntos
+      channel = supabase
+        .channel("cred-points-" + me.id)
+        .on(
+          "postgres_changes",
+          { event: "INSERT", schema: "public", table: "notifications", filter: `user_id=eq.${me.id}` },
+          async () => {
+            await loadPoints();
+          }
+        )
+        .subscribe();
+  
+      // fallback por si el callback no corre en algún móvil
+      t = setInterval(loadPoints, 10000);
+    })();
+  
+    return () => {
+      if (channel) supabase.removeChannel(channel);
+      if (t) clearInterval(t);
+    };
+  }, []);
+  
 
       // 1) QR
       const payload = JSON.stringify({ userId: me.id });
