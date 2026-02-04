@@ -19,9 +19,7 @@ export default function Ranking() {
 
   useEffect(() => {
     load();
-
-    // auto-refresh cada 10s (simple y confiable)
-    const t = setInterval(load, 10000);
+    const t = setInterval(load, 5000);
     return () => clearInterval(t);
   }, []);
 
