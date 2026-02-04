@@ -1,68 +1,72 @@
 :root {
-  font-family: system-ui, Avenir, Helvetica, Arial, sans-serif;
-  line-height: 1.5;
-  font-weight: 400;
-
-  color-scheme: light dark;
-  color: rgba(255, 255, 255, 0.87);
-  background-color: #242424;
-
-  font-synthesis: none;
-  text-rendering: optimizeLegibility;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-}
-
-a {
-  font-weight: 500;
-  color: #646cff;
-  text-decoration: inherit;
-}
-a:hover {
-  color: #535bf2;
+  --navy: #2a2f58;
+  --navy-dark: #1e2240;
+  --red: #bc3f4a;
+  --red-hover: #a32e39;
+  --gray-light: #f4f6f8;
+  --text-main: #333;
+  --text-muted: #666;
+  --white: #ffffff;
+  --radius: 16px;
+  --shadow: 0 10px 30px rgba(42, 47, 88, 0.1);
 }
 
 body {
   margin: 0;
-  display: flex;
-  place-items: center;
-  min-width: 320px;
-  min-height: 100vh;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  background-color: var(--gray-light);
+  color: var(--text-main);
+  -webkit-font-smoothing: antialiased;
 }
 
-h1 {
-  font-size: 3.2em;
-  line-height: 1.1;
-}
-
+/* === BOTONES GLOBALES === */
 button {
-  border-radius: 8px;
-  border: 1px solid transparent;
-  padding: 0.6em 1.2em;
-  font-size: 1em;
-  font-weight: 500;
-  font-family: inherit;
-  background-color: #1a1a1a;
   cursor: pointer;
-  transition: border-color 0.25s;
-}
-button:hover {
-  border-color: #646cff;
-}
-button:focus,
-button:focus-visible {
-  outline: 4px auto -webkit-focus-ring-color;
+  font-weight: 700;
+  transition: all 0.2s ease;
+  font-size: 0.95rem;
 }
 
-@media (prefers-color-scheme: light) {
-  :root {
-    color: #213547;
-    background-color: #ffffff;
-  }
-  a:hover {
-    color: #747bff;
-  }
-  button {
-    background-color: #f9f9f9;
-  }
+button:active {
+  transform: scale(0.98);
+}
+
+/* Botón Primario (Navy) */
+.btn-primary {
+  background-color: var(--navy);
+  color: var(--white);
+  border: none;
+  border-radius: 12px;
+  padding: 10px 20px;
+}
+.btn-primary:hover {
+  background-color: var(--navy-dark);
+  box-shadow: 0 4px 12px rgba(42, 47, 88, 0.3);
+}
+
+/* Botón Acción (Rojo) */
+.btn-action {
+  background-color: var(--red);
+  color: var(--white);
+  border: none;
+  border-radius: 12px;
+  padding: 10px 20px;
+}
+.btn-action:hover {
+  background-color: var(--red-hover);
+  box-shadow: 0 4px 12px rgba(188, 63, 74, 0.3);
+}
+
+/* Inputs bonitos */
+input, select, textarea {
+  padding: 12px;
+  border: 1px solid #ddd;
+  border-radius: 10px;
+  font-size: 1rem;
+  width: 100%;
+  box-sizing: border-box; /* Para que el padding no rompa el ancho */
+}
+input:focus, select:focus {
+  outline: 2px solid var(--navy);
+  border-color: transparent;
 }
