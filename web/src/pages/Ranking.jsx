@@ -8,7 +8,7 @@ export default function Ranking() {
   async function load() {
     setErr("");
     const { data, error } = await supabase
-      .from("v_leaderboard_public")
+    .from("v_leaderboard_public").select("user_id, full_name, points")
       .select("user_id, full_name, points")
       .order("points", { ascending: false })
       .limit(50);
