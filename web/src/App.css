@@ -1,4 +1,4 @@
-/* Contenedor principal para que todo esté centrado */
+/* === CONTENEDOR PRINCIPAL === */
 .app-container {
   max-width: 1000px;
   margin: 0 auto;
@@ -11,126 +11,75 @@
   background-color: white; /* Fondo Blanco */
   color: black;            /* Letras Negras */
   
-  padding: 15px 20px;
+  padding: 15px 25px;
   display: flex;
   align-items: center;
   justify-content: space-between;
   
-  /* Una sombra suavecita para que se distinga del fondo de la página */
-  box-shadow: 0 4px 12px rgba(0,0,0,0.08);
-  border-radius: 12px;
-  margin-bottom: 20px;
-  border: 1px solid #eee;
+  /* Sombra suave y borde fino */
+  box-shadow: 0 4px 20px rgba(0,0,0,0.06);
+  border: 1px solid rgba(0,0,0,0.05);
+  border-radius: 16px;
+  margin-bottom: 30px;
 }
 
-/* El Logo */
+/* === LOGO (Negro y fuerte) === */
 .brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  
   color: black;
   font-weight: 900;
   font-size: 1.2rem;
   letter-spacing: -0.5px;
 }
 
+/* === NAVEGACIÓN === */
 .main-nav {
   display: flex;
-  gap: 20px; /* Espacio entre los links */
+  align-items: center;
+  gap: 10px;
 }
 
-/* LOS ENLACES (Siempre Negros) */
+/* LOS ENLACES (Negros siempre) */
 .nav-link {
-  color: black !important; /* Fuerza el color NEGRO */
+  color: black !important; /* Fuerza el negro */
   text-decoration: none;
   font-size: 0.95rem;
   font-weight: 500;
-  opacity: 0.6; /* Un poquito gris cuando NO estás ahí */
-  transition: opacity 0.2s;
+  padding: 8px 16px;
+  border-radius: 8px;
+  opacity: 0.6; /* Un poco transparente si no está activo */
+  transition: all 0.2s ease;
 }
 
-/* Cuando pasas el mouse o estás en la sección */
+/* Cuando pasas el mouse o está activo */
 .nav-link:hover,
 .nav-link.active {
   opacity: 1; /* Negro total */
-  font-weight: 800; /* Más gordita la letra */
-  text-decoration: underline;
-}
-
-/* Botón Salir (Rojo para diferenciar) */
-.btn-logout {
-  background-color: black;
-  color: black;
-  border: none;
-  padding: 8px 16px;
-  border-radius: 6px;
-  font-weight: bold;
-  cursor: pointer;
-}
-
-.btn-logout:hover {
-  background: var(--red);
-  color: black;
-}
-
-/* Marca / Logo */
-.brand {
-  display: flex;
-  align-items: center;
-  gap: 12px;
   font-weight: 800;
-  font-size: 1.1rem;
-  letter-spacing: 0.5px;
-  color: white;
-  white-space: nowrap; /* Que no se rompa el texto */
+  background-color: #f5f5f5; /* Fondo grisecito muy sutil */
 }
 
-/* Navegación (Links) */
-.main-nav {
-  display: flex;
-  align-items: center;
-  gap: 8px; /* Espacio entre botoncitos */
-  flex-wrap: wrap;
-  justify-content: center;
-}
-
-/* Estilo de cada Link (Secciones visibles siempre) */
-.nav-link {
-  color: rgba(255, 255, 255, 0.9); /* Casi blanco total para que se vea bien */
-  text-decoration: none;
-  font-weight: 600;
-  font-size: 0.9rem;
-  padding: 8px 16px;
-  border-radius: 20px; /* Forma de píldora */
-  transition: all 0.25s cubic-bezier(0.25, 0.8, 0.25, 1);
-}
-
-/* Efecto al pasar el mouse */
-.nav-link:hover {
-  background-color: rgba(255, 255, 255, 0.15);
-  color: white;
-}
-
-/* Efecto de la SECCIÓN ACTIVA (Estilo píldora blanca) */
-.nav-link.active {
-  background-color: white;
-  color: var(--navy); /* Texto azul */
-  box-shadow: 0 4px 12px rgba(0,0,0,0.1);
-  transform: translateY(-1px); /* Pequeño brinco */
-}
-
-/* Botón Salir (Más discreto para no robar atención) */
+/* === BOTÓN SALIR (CORREGIDO) === */
 .btn-logout {
-  background: var(--red);
-  color: white;
+  background-color: black; /* Fondo NEGRO */
+  color: white;            /* Letra BLANCA (para que se lea) */
+  
   border: none;
-  border-radius: 12px;
-  padding: 8px 16px;
-  font-size: 0.85rem;
+  padding: 10px 20px;
+  border-radius: 10px;
   font-weight: 700;
-  margin-left: 10px;
-  box-shadow: 0 4px 10px rgba(188, 63, 74, 0.3);
+  font-size: 0.85rem;
+  cursor: pointer;
+  margin-left: 15px;
+  transition: transform 0.2s, background-color 0.2s;
 }
 
+/* Al pasar el mouse se pone ROJO (para indicar salir) */
 .btn-logout:hover {
-  background: var(--red-hover);
+  background-color: #d32f2f; /* Rojo */
   transform: scale(1.05);
 }
 
@@ -140,21 +89,11 @@
     flex-direction: column;
     gap: 15px;
     padding: 20px;
-    border-radius: 20px;
   }
   
   .main-nav {
     width: 100%;
     justify-content: center;
-    gap: 5px;
-  }
-
-  .nav-link {
-    font-size: 0.85rem;
-    padding: 6px 12px;
-  }
-  
-  .brand {
-    margin-bottom: 5px;
+    flex-wrap: wrap;
   }
 }
