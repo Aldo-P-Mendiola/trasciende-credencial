@@ -11,10 +11,11 @@ export default function StaffScan() {
   const qrRegionId = "qr-reader-region";
   const scannerRef = useRef(null);
 
-  // anti-spam / dedupe
+  // Referencias para evitar lecturas dobles (Anti-spam)
   const processingRef = useRef(false);
   const lastRef = useRef({ key: "", ts: 0 });
 
+  // 1. Cargar eventos activos al entrar
   useEffect(() => {
     (async () => {
       try {
@@ -41,6 +42,7 @@ export default function StaffScan() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // 2. Iniciar Cámara
   async function startScan() {
     try {
       if (isScanning) return;
@@ -56,35 +58,36 @@ export default function StaffScan() {
         { facingMode: "environment" },
         { fps: 10, qrbox: { width: 250, height: 250 } },
         async (decodedText) => {
+          // Si ya estamos procesando uno, ignoramos
           if (processingRef.current) return;
 
-          // intenta extraer userId; si no, usa texto crudo como fallback
+          // Extraer userId del JSON del QR
           let userId = "";
           try {
             userId = JSON.parse(decodedText)?.userId ?? "";
           } catch {
-            userId = "";
+            // Si falla el parseo, userId se queda vacío
           }
 
-          // clave de dedupe robusta
+          // Clave única para evitar spam de la misma persona en el mismo evento en menos de 8s
           const key = `${eventId}::${userId || decodedText}`;
-
           const now = Date.now();
-          const within = now - lastRef.current.ts < 8000; // 8s antispam fuerte
-          const same = lastRef.current.key === key;
+          const withinTime = now - lastRef.current.ts < 8000; 
+          const sameKey = lastRef.current.key === key;
 
-          if (same && within) return;
+          if (sameKey && withinTime) return;
 
+          // Si pasa el filtro, registramos
           lastRef.current = { key, ts: now };
-
           processingRef.current = true;
+
           try {
             await registerCheckin(decodedText);
           } finally {
-            // suelta el lock después (para que no se dispare en ráfaga)
+            // Liberamos el bloqueo después de un ratito
             setTimeout(() => {
               processingRef.current = false;
-            }, 1200);
+            }, 1500);
           }
         }
       );
@@ -97,6 +100,7 @@ export default function StaffScan() {
     }
   }
 
+  // 3. Detener Cámara
   async function stopScan() {
     try {
       if (scannerRef.current) {
@@ -111,10 +115,12 @@ export default function StaffScan() {
     }
   }
 
+  // 4. Lógica de Registro (Conexión con Supabase)
   async function registerCheckin(payloadStr) {
     try {
-      setStatus("Procesando…");
+      setStatus("Procesando QR...");
 
+      // A) Parsear el QR
       let parsed;
       try {
         parsed = JSON.parse(payloadStr);
@@ -125,52 +131,40 @@ export default function StaffScan() {
       const userId = parsed?.userId;
       if (!userId) throw new Error("QR inválido (sin userId).");
 
-      const { data, error } = await supabase.rpc("register_checkin", {
-        p_event_id: eventId,
-        p_user_id: userId,
-      });
-
-      if (error) {
-        const msg = String(error.message || "").toLowerCase();
-        if (msg.includes("duplicate") || msg.includes("conflict") || msg.includes("already")) {
-          setStatus("⚠️ Ya estaba registrado en este evento.");
-          return;
-        }
-        setStatus("❌ " + error.message);
-        return;
-      }
-
-// 1. LLAMADA AL SQL (RPC)
-      // OJO: "data" aquí recibe directamente el número de puntos (int), no un array.
+      // B) Llamar a la Base de Datos (RPC)
+      // Usamos 'event_id' y 'user_id' tal cual lo definimos en el SQL
       const { data: totalPoints, error: rpcError } = await supabase.rpc("register_checkin", {
         event_id: eventId,
-        user_id: scannedUserId // Asegúrate de usar la variable donde guardaste el ID del QR
+        user_id: userId,
       });
 
-      if (rpcError) throw rpcError;
+      if (rpcError) {
+        console.error("RPC Error:", rpcError);
+        throw new Error(rpcError.message);
+      }
 
-      // 2. MANDAR NOTIFICACIÓN
-      // Como el SQL maneja los duplicados internamente, aquí asumimos éxito.
-      // Le avisamos al alumno cuántos puntos tiene ahora.
+      // C) Enviar Notificación al Alumno
       const { error: notifErr } = await supabase.from("notifications").insert({
-        user_id: scannedUserId, // El ID del alumno
+        user_id: userId,
         title: "Asistencia registrada",
         body: `¡Asistencia tomada! Tu nuevo total es de ${totalPoints} puntos.`,
       });
 
       if (notifErr) console.log("NOTIF ERROR:", notifErr.message);
 
-      // 3. ACTUALIZAR TEXTO EN PANTALLA
+      // D) Éxito en pantalla
       setStatus(`✅ Check-in OK. Total puntos: ${totalPoints}`);
 
-      // pausa dura 8s aunque el QR siga en cámara (anti spam)
-      processingRef.current = true;
-      setTimeout(() => {
-        processingRef.current = false;
-      }, 8000);
     } catch (e) {
       console.log("REGISTER ERROR:", e);
-      setStatus("Error: " + (e?.message ?? String(e)));
+      const msg = String(e?.message ?? e).toLowerCase();
+      
+      // Mensajes amigables
+      if (msg.includes("duplicate") || msg.includes("unique")) {
+        setStatus("⚠️ El alumno ya estaba registrado en este evento.");
+      } else {
+        setStatus("❌ Error: " + (e?.message ?? "Desconocido"));
+      }
     }
   }
 
@@ -178,30 +172,52 @@ export default function StaffScan() {
     <div style={{ maxWidth: 720, margin: "0 auto" }}>
       <h2>Staff · Escanear</h2>
 
-      <div style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap" }}>
+      <div style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap", marginBottom: 20 }}>
         <label>
-          Evento:&nbsp;
-          <select value={eventId} onChange={(e) => setEventId(e.target.value)}>
+          <b>Evento:</b>&nbsp;
+          <select 
+            value={eventId} 
+            onChange={(e) => setEventId(e.target.value)}
+            style={{ padding: 8, borderRadius: 8, border: "1px solid #ccc" }}
+          >
             {events.map((ev) => (
               <option key={ev.id} value={ev.id}>
-                {ev.title} ({new Date(ev.start_time).toLocaleString()})
+                {ev.title}
               </option>
             ))}
           </select>
         </label>
 
         {!isScanning ? (
-          <button onClick={startScan}>Iniciar escaneo</button>
+          <button className="btn-primary" onClick={startScan}>Iniciar Cámara</button>
         ) : (
-          <button onClick={stopScan}>Detener</button>
+          <button className="btn-action" onClick={stopScan}>Detener</button>
         )}
       </div>
 
-      <div style={{ marginTop: 12, padding: 10, border: "1px solid #ddd", borderRadius: 12 }}>
+      <div style={{ 
+        marginTop: 12, 
+        padding: 10, 
+        border: "2px dashed #ccc", 
+        borderRadius: 12, 
+        background: "#f9f9f9",
+        minHeight: 300 
+      }}>
         <div id={qrRegionId} />
       </div>
 
-      <div style={{ marginTop: 10 }}>{status}</div>
+      <div style={{ 
+        marginTop: 20, 
+        padding: 15, 
+        background: status.includes("✅") ? "#eeffee" : (status.includes("❌") ? "#ffeeee" : "white"),
+        borderRadius: 12,
+        textAlign: "center",
+        fontWeight: "bold",
+        fontSize: "1.1rem",
+        boxShadow: "0 2px 10px rgba(0,0,0,0.05)"
+      }}>
+        {status}
+      </div>
     </div>
   );
 }
