@@ -53,21 +53,33 @@ export default function Events() {
     e.preventDefault();
     if (!newEvent.title || !newEvent.start_time) return alert("Faltan datos");
 
-    const { error } = await supabase.from("events").insert({
-      title: newEvent.title,
-      start_time: newEvent.start_time, // Supabase acepta formato ISO directo del input datetime-local
-      location: newEvent.location,
-      points: newEvent.points,
-      active: true
-    });
+    // 1. Crear el Evento
+    const { data: eventData, error: eventError } = await supabase
+      .from("events")
+      .insert({
+        title: newEvent.title,
+        start_time: newEvent.start_time,
+        location: newEvent.location,
+        points: newEvent.points,
+        active: true
+      })
+      .select()
+      .single();
 
-    if (error) {
-      alert("Error al crear: " + error.message);
+    if (eventError) {
+      alert("Error al crear evento: " + eventError.message);
     } else {
-      alert("✅ Evento creado con éxito");
+      // 2. ¡ÉXITO! Ahora enviamos la notificación PUSH a todos (user_id: null)
+      await supabase.from("notifications").insert({
+        user_id: null, // null significa "Para todos"
+        title: "Nuevo Evento: " + newEvent.title,
+        body: `Gana ${newEvent.points} pts en ${newEvent.location}. ¡Te esperamos!`,
+      });
+
+      alert("✅ Evento creado y notificación enviada a todos.");
       setShowForm(false);
       setNewEvent({ title: "", start_time: "", location: "Auditorio Principal", points: 50 });
-      fetchEvents(); // Recargar la lista
+      fetchEvents();
     }
   }
 
