@@ -6,73 +6,62 @@
   min-height: 100vh;
 }
 
-/* === HEADER CÁPSULA NAVY (DISEÑO FINAL) === */
+/* === HEADER LIMPIO (FONDO BLANCO - LETRAS NEGRAS) === */
 .main-header {
-  background-color: var(--navy); /* Fondo Azul */
-  border-radius: 100px;
-  padding: 10px 24px;
-  margin-bottom: 2rem;
+  background-color: white; /* Fondo Blanco */
+  color: black;            /* Letras Negras */
   
+  padding: 15px 20px;
   display: flex;
   align-items: center;
   justify-content: space-between;
   
-  box-shadow: 0 10px 30px rgba(42, 47, 88, 0.4); /* Sombra elegante */
+  /* Una sombra suavecita para que se distinga del fondo de la página */
+  box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+  border-radius: 12px;
+  margin-bottom: 20px;
+  border: 1px solid #eee;
 }
 
-/* Marca / Logo */
+/* El Logo */
 .brand {
-  display: flex;
-  align-items: center;
-  gap: 12px;
+  color: black;
   font-weight: 900;
-  font-size: 1.1rem;
-  color: black; /* Logo blanco */
+  font-size: 1.2rem;
+  letter-spacing: -0.5px;
 }
 
-/* Navegación */
 .main-nav {
   display: flex;
-  align-items: center;
-  gap: 6px;
+  gap: 20px; /* Espacio entre los links */
 }
 
-/* Links INACTIVOS (Se ven blancos pero tenues) */
+/* LOS ENLACES (Siempre Negros) */
 .nav-link {
-  color: rgba(255, 255, 255, 0.7); 
+  color: black !important; /* Fuerza el color NEGRO */
   text-decoration: none;
-  font-weight: 600;
-  font-size: 0.9rem;
-  padding: 8px 18px;
-  border-radius: 20px;
-  transition: all 0.2s ease;
+  font-size: 0.95rem;
+  font-weight: 500;
+  opacity: 0.6; /* Un poquito gris cuando NO estás ahí */
+  transition: opacity 0.2s;
 }
 
-/* Hover */
-.nav-link:hover {
-  color: black;
-  background-color: rgba(255, 255, 255, 0.1);
-}
-
-/* === AQUÍ ESTÁ LA MAGIA === */
-/* La sección ACTIVA se vuelve BLANCA con LETRAS NEGRAS */
+/* Cuando pasas el mouse o estás en la sección */
+.nav-link:hover,
 .nav-link.active {
-  background-color: white;
-  color: black !important; /* Letras negras */
-  box-shadow: 0 4px 12px rgba(0,0,0,0.2);
-  transform: translateY(-1px);
+  opacity: 1; /* Negro total */
+  font-weight: 800; /* Más gordita la letra */
+  text-decoration: underline;
 }
 
-/* Botón Salir */
+/* Botón Salir (Rojo para diferenciar) */
 .btn-logout {
-  background: var(--red);
-  color: black;
+  background-color: black;
+  color: white;
   border: none;
-  border-radius: 20px;
   padding: 8px 16px;
-  font-size: 0.85rem;
-  font-weight: 700;
-  margin-left: 10px;
+  border-radius: 6px;
+  font-weight: bold;
   cursor: pointer;
 }
 
