@@ -67,8 +67,9 @@
 
 .btn-logout:hover {
   background: var(--red);
-  color: white;
+  color: black;
 }
+
 /* Marca / Logo */
 .brand {
   display: flex;
