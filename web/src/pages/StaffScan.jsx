@@ -140,22 +140,28 @@ export default function StaffScan() {
         return;
       }
 
-      // Si tu RPC devuelve created/new_points, úsalo:
-      const created = data?.[0]?.created; // (si existe)
-      const newPoints = data?.[0]?.new_points;
+// 1. LLAMADA AL SQL (RPC)
+      // OJO: "data" aquí recibe directamente el número de puntos (int), no un array.
+      const { data: totalPoints, error: rpcError } = await supabase.rpc("register_checkin", {
+        event_id: eventId,
+        user_id: scannedUserId // Asegúrate de usar la variable donde guardaste el ID del QR
+      });
 
-      // ✅ NOTIF solo si fue un registro nuevo.
-      // Si tu RPC no devuelve created, al menos el dedupe arriba evita spam.
-      if (created !== false) {
-        const { error: notifErr } = await supabase.from("notifications").insert({
-          user_id: userId,
-          title: "Asistencia registrada",
-          body: "Tu asistencia fue registrada. Revisa tus puntos en la credencial.",
-        });
-        if (notifErr) console.log("NOTIF ERROR:", notifErr.message);
-      }
+      if (rpcError) throw rpcError;
 
-      setStatus(`✅ Check-in OK. Nuevos puntos: ${newPoints ?? "?"}`);
+      // 2. MANDAR NOTIFICACIÓN
+      // Como el SQL maneja los duplicados internamente, aquí asumimos éxito.
+      // Le avisamos al alumno cuántos puntos tiene ahora.
+      const { error: notifErr } = await supabase.from("notifications").insert({
+        user_id: scannedUserId, // El ID del alumno
+        title: "Asistencia registrada",
+        body: `¡Asistencia tomada! Tu nuevo total es de ${totalPoints} puntos.`,
+      });
+
+      if (notifErr) console.log("NOTIF ERROR:", notifErr.message);
+
+      // 3. ACTUALIZAR TEXTO EN PANTALLA
+      setStatus(`✅ Check-in OK. Total puntos: ${totalPoints}`);
 
       // pausa dura 8s aunque el QR siga en cámara (anti spam)
       processingRef.current = true;

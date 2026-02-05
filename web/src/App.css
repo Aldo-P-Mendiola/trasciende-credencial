@@ -6,40 +6,40 @@
   min-height: 100vh;
 }
 
-/* === HEADER FLOTANTE BLANCO (ESTILO LIMPIO) === */
+/* === HEADER CÁPSULA NAVY (DISEÑO FINAL) === */
 .main-header {
-  background-color: white; /* Fondo blanco */
-  border-radius: 100px; /* Bordes totalmente redondos */
-  padding: 10px 20px;
+  background-color: var(--navy); /* Fondo Azul */
+  border-radius: 100px;
+  padding: 10px 24px;
   margin-bottom: 2rem;
-  
-  /* Sombra suave para separarlo del fondo */
-  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.08);
   
   display: flex;
   align-items: center;
   justify-content: space-between;
-  border: 1px solid rgba(0,0,0,0.05);
+  
+  box-shadow: 0 10px 30px rgba(42, 47, 88, 0.4); /* Sombra elegante */
 }
 
 /* Marca / Logo */
 .brand {
   display: flex;
   align-items: center;
-  font-weight: 800;
+  gap: 12px;
+  font-weight: 900;
   font-size: 1.1rem;
-  color: var(--navy); /* El logo en azul oscuro */
+  color: white; /* Logo blanco */
 }
 
 /* Navegación */
 .main-nav {
   display: flex;
-  gap: 5px; 
+  align-items: center;
+  gap: 6px;
 }
 
-/* Links INACTIVOS (Se ven en gris oscuro/negro) */
+/* Links INACTIVOS (Se ven blancos pero tenues) */
 .nav-link {
-  color: #555; /* Gris oscuro para que SE VEAN SIEMPRE */
+  color: rgba(255, 255, 255, 0.7); 
   text-decoration: none;
   font-weight: 600;
   font-size: 0.9rem;
@@ -48,23 +48,25 @@
   transition: all 0.2s ease;
 }
 
-/* Hover (al pasar el mouse) */
+/* Hover */
 .nav-link:hover {
-  background-color: #f0f0f5; /* Gris muy clarito */
-  color: black;
+  color: white;
+  background-color: rgba(255, 255, 255, 0.1);
 }
 
-/* Link ACTIVO (Donde estás ahorita) */
+/* === AQUÍ ESTÁ LA MAGIA === */
+/* La sección ACTIVA se vuelve BLANCA con LETRAS NEGRAS */
 .nav-link.active {
-  background-color: var(--navy); /* Azul oscuro */
-  color: white !important; /* Letras blancas */
-  box-shadow: 0 4px 10px rgba(42, 47, 88, 0.3);
+  background-color: white;
+  color: black !important; /* Letras negras */
+  box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+  transform: translateY(-1px);
 }
 
 /* Botón Salir */
 .btn-logout {
-  background: #ffeeee;
-  color: var(--red);
+  background: var(--red);
+  color: white;
   border: none;
   border-radius: 20px;
   padding: 8px 16px;
