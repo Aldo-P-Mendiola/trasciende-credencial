@@ -15,20 +15,18 @@ export default function AdminHistory() {
       setLoading(true);
       setErrorMsg("");
 
-      // Consulta simple: Trae asistencia, y "popula" los datos de profiles y events
+      // CORRECCIÓN: Quitamos 'student_id' y ponemos 'email'
       const { data, error } = await supabase
         .from("attendance")
         .select(`
           scanned_at,
-          profiles ( full_name, student_id ),
+          profiles ( full_name, email ), 
           events ( title, points )
         `)
         .order("scanned_at", { ascending: false })
         .limit(50);
 
       if (error) throw error;
-
-      console.log("LOGS:", data);
       setLogs(data || []);
 
     } catch (e) {
@@ -46,15 +44,9 @@ export default function AdminHistory() {
         <button className="btn-primary" onClick={fetchLogs}>🔄 Actualizar</button>
       </div>
 
-      {errorMsg && (
-        <div style={{ background: "#fee", color: "red", padding: 10, borderRadius: 8, marginBottom: 20 }}>
-          Error: {errorMsg}
-        </div>
-      )}
+      {errorMsg && <div style={{ color: "red", marginBottom: 10 }}>Error: {errorMsg}</div>}
 
-      {loading ? (
-        <p>Cargando...</p>
-      ) : (
+      {loading ? <p>Cargando...</p> : (
         <div style={{ overflowX: "auto", background: "white", borderRadius: 10, boxShadow: "0 4px 12px rgba(0,0,0,0.05)" }}>
           <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 600 }}>
             <thead style={{ background: "#2a2f58", color: "white", textAlign: "left" }}>
@@ -73,7 +65,9 @@ export default function AdminHistory() {
                   <tr key={i} style={{ borderBottom: "1px solid #eee" }}>
                     <td style={{ padding: 12 }}>
                       <strong>{log.profiles?.full_name || "—"}</strong>
-                      <br/><small style={{color:"#888"}}>{log.profiles?.student_id}</small>
+                      <br/>
+                      {/* Aquí mostramos el email en vez de student_id */}
+                      <small style={{color:"#888"}}>{log.profiles?.email}</small>
                     </td>
                     <td style={{ padding: 12 }}>{log.events?.title || "—"}</td>
                     <td style={{ padding: 12, color: "green", fontWeight:"bold" }}>+{log.events?.points}</td>
