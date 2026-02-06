@@ -3,6 +3,7 @@ import { Routes, Route, Link, Navigate, useLocation } from "react-router-dom";
 import { supabase } from "./lib/supabase";
 import "./App.css"; // Importamos los estilos nuevos
 
+import AdminHistory from "./pages/AdminHistory";
 import StaffNotifications from "./pages/StaffNotifications";
 import NotificationsBell from "./components/NotificationsBell";
 import Login from "./pages/Login";
@@ -57,7 +58,7 @@ export default function App() {
           <Link to="/" className={location.pathname === "/" ? "nav-link active" : "nav-link"}>Credencial</Link>
           <Link to="/events" className={location.pathname === "/events" ? "nav-link active" : "nav-link"}>Eventos</Link>
           <Link to="/ranking" className={location.pathname === "/ranking" ? "nav-link active" : "nav-link"}>Ranking</Link>
-          
+          <Link to="/admin-history" className={`nav-link ${location.pathname === "/admin-history" ? "active" : ""}`}>Historial</Link>
           {isStaff && (
             <>
               <Link to="/staff" className={location.pathname === "/staff" ? "nav-link active" : "nav-link"}>Scanner</Link>
@@ -79,6 +80,7 @@ export default function App() {
           <Route path="/staff" element={isStaff ? <StaffScan /> : <Navigate to="/" />} />
           <Route path="/staff-notifs" element={isStaff ? <StaffNotifications /> : <Navigate to="/" />} />
           <Route path="*" element={<Navigate to="/" />} />
+          <Route path="/admin-history" element={<AdminHistory />} />
         </Routes>
       </main>
     </div>
