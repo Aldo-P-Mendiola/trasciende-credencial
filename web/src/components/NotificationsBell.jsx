@@ -1,49 +1,50 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { supabase } from "../lib/supabase";
 
 export default function NotificationsBell() {
   const [open, setOpen] = useState(false);
   const [items, setItems] = useState([]);
   
-  // Cargamos las notificaciones
+  // Referencia para detectar clicks fuera y cerrar
+  const menuRef = useRef(null);
+
   async function load() {
-    // Seleccionamos las columnas correctas de la nueva tabla
     const { data, error } = await supabase
       .from("notifications")
       .select("id, title, message, created_at") 
       .order("created_at", { ascending: false })
       .limit(20);
 
-    if (error) {
-      console.log("Error cargando notifs:", error.message);
-      return;
-    }
-
-    setItems(data ?? []);
+    if (!error) setItems(data ?? []);
   }
 
   useEffect(() => {
     load();
-
-    // Suscripción en tiempo real para que aparezca el puntito rojo al instante
     const channel = supabase
       .channel("public-notifs")
       .on(
         "postgres_changes",
         { event: "INSERT", schema: "public", table: "notifications" },
-        (payload) => {
-          setItems((prev) => [payload.new, ...prev].slice(0, 20));
-        }
+        (payload) => setItems((prev) => [payload.new, ...prev].slice(0, 20))
       )
       .subscribe();
 
+    // Cerrar menú si das click fuera
+    function handleClickOutside(event) {
+      if (menuRef.current && !menuRef.current.contains(event.target)) {
+        setOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+
     return () => {
       supabase.removeChannel(channel);
+      document.removeEventListener("mousedown", handleClickOutside);
     };
   }, []);
 
   return (
-    <div style={{ position: "relative" }}>
+    <div style={{ position: "relative" }} ref={menuRef}>
       <button
         onClick={() => setOpen(!open)}
         style={{
@@ -51,29 +52,29 @@ export default function NotificationsBell() {
           background: "transparent",
           color: "#cacbd3",
           borderRadius: "50%",
-          width: "40px",
-          height: "40px",
+          width: "42px",
+          height: "42px",
           cursor: "pointer",
           display: "flex", 
           alignItems: "center", 
           justifyContent: "center",
-          fontSize: "20px"
+          fontSize: "20px",
+          position: "relative"
         }}
         title="Notificaciones"
       >
         🔔
-        {/* Si hay items, mostramos un puntito rojo simple */}
         {items.length > 0 && (
           <span
             style={{
               position: "absolute",
-              top: 0,
-              right: 0,
-              width: "12px",
-              height: "12px",
-              background: "#bc3f4a",
+              top: -2,
+              right: -2,
+              width: "14px",
+              height: "14px",
+              background: "#e02424",
               borderRadius: "50%",
-              border: "2px solid white"
+              border: "2px solid #fff"
             }}
           />
         )}
@@ -83,45 +84,86 @@ export default function NotificationsBell() {
         <div
           style={{
             position: "absolute",
-            right: 0,
-            top: "120%",
-            width: 320,
+            right: -10, // Un poco más a la derecha para no cortarse en pantallas pequeñas
+            top: "130%",
+            // RESPONSIVIDAD: 
+            // Ancho fijo de 300px, PERO si la pantalla es más chica, usa el 90% del ancho
+            width: "300px", 
+            maxWidth: "85vw", 
             background: "#2a2f58",
-            borderRadius: 14,
-            padding: 15,
+            borderRadius: 16,
+            padding: 0, // Quitamos padding general para controlar mejor
             color: "white",
-            boxShadow: "0 10px 40px rgba(0,0,0,0.5)",
-            zIndex: 100,
-            border: "1px solid rgba(255,255,255,0.1)"
+            boxShadow: "0 15px 50px rgba(0,0,0,0.6)", // Sombra fuerte para resaltar
+            zIndex: 9999, // Super encima de todo
+            border: "1px solid rgba(255,255,255,0.15)",
+            overflow: "hidden"
           }}
         >
-          <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 10 }}>
-            <b style={{fontSize: "16px"}}>📢 Últimos avisos</b>
+          {/* Header de la cajita */}
+          <div style={{ 
+            display: "flex", 
+            justifyContent: "space-between", 
+            alignItems: "center",
+            padding: "15px",
+            background: "rgba(0,0,0,0.2)",
+            borderBottom: "1px solid rgba(255,255,255,0.1)"
+          }}>
+            <b style={{fontSize: "15px"}}>📢 Avisos Recientes</b>
             <button 
                 onClick={() => setOpen(false)} 
-                style={{background:"none", border:"none", color:"#aaa", cursor:"pointer"}}>
+                style={{background:"none", border:"none", color:"#ccc", fontSize: "18px", cursor:"pointer"}}>
                 ✕
             </button>
           </div>
 
-          <div style={{ display: "flex", flexDirection: "column", gap: 10, maxHeight: "300px", overflowY: "auto" }}>
-            {items.length === 0 && <div style={{color: "#aaa", textAlign: "center", padding: "20px"}}>No hay notificaciones recientes.</div>}
+          {/* Lista scrolleable */}
+          <div style={{ 
+            display: "flex", 
+            flexDirection: "column", 
+            maxHeight: "60vh", // Máximo 60% de la altura del cel
+            overflowY: "auto" 
+          }}>
+            {items.length === 0 && (
+              <div style={{color: "#aaa", textAlign: "center", padding: "30px"}}>
+                Todo tranquilo por aquí. 😴
+              </div>
+            )}
             
             {items.map((n) => (
               <div
                 key={n.id}
                 style={{
-                  padding: "12px",
-                  borderRadius: 8,
-                  background: "rgba(255,255,255,0.1)",
-                  borderLeft: "4px solid #4CAF50"
+                  padding: "15px",
+                  borderBottom: "1px solid rgba(255,255,255,0.05)",
+                  background: "transparent"
                 }}
               >
-                <div style={{ fontWeight: "bold", fontSize: "14px", marginBottom: "4px" }}>{n.title}</div>
-                {/* Aquí usamos n.message en vez de n.body */}
-                <div style={{ fontSize: "13px", color: "#ddd", lineHeight: "1.4" }}>{n.message}</div>
-                <div style={{ fontSize: "10px", color: "#aaa", marginTop: "5px", textAlign: "right" }}>
-                    {new Date(n.created_at).toLocaleDateString()}
+                <div style={{ 
+                  fontWeight: "bold", 
+                  fontSize: "15px", 
+                  marginBottom: "5px",
+                  color: "#fff"
+                }}>
+                  {n.title}
+                </div>
+                <div style={{ 
+                  fontSize: "13px", 
+                  color: "#ddd", 
+                  lineHeight: "1.5", // Espacio entre renglones para que no se encime
+                  whiteSpace: "pre-wrap" // Respeta los saltos de línea
+                }}>
+                  {n.message}
+                </div>
+                <div style={{ 
+                  fontSize: "11px", 
+                  color: "#aaa", 
+                  marginTop: "8px", 
+                  textAlign: "right" 
+                }}>
+                  {new Date(n.created_at).toLocaleDateString("es-MX", {
+                    day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit'
+                  })}
                 </div>
               </div>
             ))}
