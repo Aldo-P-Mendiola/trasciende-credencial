@@ -5,7 +5,7 @@ export default function NotificationsBell() {
   const [open, setOpen] = useState(false);
   const [items, setItems] = useState([]);
   
-  // Referencia para detectar clicks fuera y cerrar el menú
+  // Referencia para detectar clicks fuera y cerrar
   const menuRef = useRef(null);
 
   async function load() {
@@ -29,7 +29,6 @@ export default function NotificationsBell() {
       )
       .subscribe();
 
-    // Cerrar menú si das click fuera
     function handleClickOutside(event) {
       if (menuRef.current && !menuRef.current.contains(event.target)) {
         setOpen(false);
@@ -60,7 +59,7 @@ export default function NotificationsBell() {
           justifyContent: "center",
           fontSize: "20px",
           position: "relative",
-          zIndex: 1001 // Asegura que el botón flote sobre lo demás
+          zIndex: 1001 
         }}
         title="Notificaciones"
       >
@@ -85,20 +84,21 @@ export default function NotificationsBell() {
         <div
           style={{
             position: "absolute",
-            // TRUCO PARA ANDROID:
-            // Movemos la caja a la derecha (-70px) para que no se corte a la izquierda.
-            right: "-70px", 
+            
+            // --- AJUSTE FINO ANDROID ---
+            // 1. La empujamos más a la derecha (antes era -70px)
+            right: "-115px", 
+            
             top: "55px",
             
-            // ANCHO RESPONSIVO:
-            // Usa 320px si cabe, si no, usa el 90% de la pantalla del cel.
-            width: "min(320px, 90vw)", 
+            // 2. La hacemos un poco más angosta (280px) para que entre seguro
+            width: "min(280px, 85vw)", 
             
             background: "#2a2f58",
             borderRadius: 16,
             padding: 0, 
             color: "white",
-            boxShadow: "0 15px 50px rgba(0,0,0,0.6)", // Sombra fuerte para que resalte
+            boxShadow: "0 15px 50px rgba(0,0,0,0.6)", 
             zIndex: 9999,
             border: "1px solid rgba(255,255,255,0.15)",
             overflow: "hidden",
@@ -106,7 +106,7 @@ export default function NotificationsBell() {
             flexDirection: "column"
           }}
         >
-          {/* Header de la cajita */}
+          {/* Header */}
           <div style={{ 
             display: "flex", 
             justifyContent: "space-between", 
@@ -123,11 +123,11 @@ export default function NotificationsBell() {
             </button>
           </div>
 
-          {/* Lista scrolleable */}
+          {/* Lista */}
           <div style={{ 
             display: "flex", 
             flexDirection: "column", 
-            maxHeight: "50vh", // Que no ocupe más de la mitad de la pantalla de alto
+            maxHeight: "50vh", 
             overflowY: "auto" 
           }}>
             {items.length === 0 && (
@@ -157,7 +157,6 @@ export default function NotificationsBell() {
                   {n.title}
                 </div>
                 
-                {/* Texto del mensaje: word-break evita que se salga del contenedor */}
                 <div style={{ 
                   fontSize: "13px", 
                   color: "#ddd", 
@@ -168,13 +167,13 @@ export default function NotificationsBell() {
                   {n.message}
                 </div>
                 
-                {/* Fecha y Hora (Formato 24h) */}
                 <div style={{ 
                   fontSize: "11px", 
                   color: "#aaa", 
                   marginTop: "5px", 
                   textAlign: "right" 
                 }}>
+                  {/* HORA MILITAR (24H) */}
                   {new Date(n.created_at).toLocaleDateString("es-MX", {
                     day: 'numeric', month: 'short', 
                     hour: '2-digit', minute: '2-digit', 
