@@ -10,7 +10,7 @@ export default function StaffNotifications() {
 
   // TUS CLAVES
   const ONESIGNAL_APP_ID = "cf0f90d1-9497-4367-b520-fc3976d2f7cb"; 
-  const ONESIGNAL_REST_API_KEY = "k7gby5rchedmfbvo5ey2zyao4"; // <--- ¡OJO! Pega tu Key aquí de nuevo
+  //const ONESIGNAL_REST_API_KEY = "k7gby5rchedmfbvo5ey2zyao4"; // <--- ¡OJO! Pega tu Key aquí de nuevo
 
   const handleSendNotification = async (e) => {
     e.preventDefault();
@@ -24,7 +24,6 @@ export default function StaffNotifications() {
         headers: {
           accept: "application/json",
           "Content-Type": "application/json",
-          Authorization: `Basic ${ONESIGNAL_REST_API_KEY}`,
         },
         body: JSON.stringify({
           app_id: ONESIGNAL_APP_ID,
