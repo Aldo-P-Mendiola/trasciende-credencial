@@ -1,114 +1,102 @@
-import { useEffect, useState } from "react";
-import { supabase } from "../lib/supabase";
+import { useState } from "react";
+import { supabase } from "../lib/supabase"; // <--- Importamos Supabase
+import "../App.css";
 
 export default function StaffNotifications() {
-  const [mode, setMode] = useState("all"); // all | one
-  const [email, setEmail] = useState("");
-  const [userId, setUserId] = useState(null);
-  const [title, setTitle] = useState("Aviso Trasciende");
-  const [body, setBody] = useState("");
-  const [status, setStatus] = useState("");
+  const [title, setTitle] = useState("");
+  const [message, setMessage] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [status, setStatus] = useState(null);
 
-  useEffect(() => {
-    setStatus("");
-  }, [mode]);
+  // TUS CLAVES
+  const ONESIGNAL_APP_ID = "cf0f90d1-9497-4367-b520-fc3976d2f7cb"; 
+  const ONESIGNAL_REST_API_KEY = "AQUI_PEGA_TU_REST_API_KEY_NUEVA"; // <--- ¡OJO! Pega tu Key aquí de nuevo
 
-  async function resolveUser() {
-    setStatus("Buscando usuario…");
-    const clean = email.trim().toLowerCase();
-    if (!clean) return setStatus("Pon un email.");
+  const handleSendNotification = async (e) => {
+    e.preventDefault();
+    setLoading(true);
+    setStatus(null);
 
-    const { data, error } = await supabase
-      .from("profiles")
-      .select("id,email,full_name")
-      .ilike("email", clean)
-      .maybeSingle();
+    try {
+      // 1. Enviar PUSH a OneSignal (Para que suene el celular)
+      const options = {
+        method: "POST",
+        headers: {
+          accept: "application/json",
+          "Content-Type": "application/json",
+          Authorization: `Basic ${ONESIGNAL_REST_API_KEY}`,
+        },
+        body: JSON.stringify({
+          app_id: ONESIGNAL_APP_ID,
+          included_segments: ["All"],
+          headings: { en: title },
+          contents: { en: message },
+        }),
+      };
 
-    if (error) return setStatus("Error: " + error.message);
-    if (!data?.id) return setStatus("No encontré ese email en profiles.");
+      const response = await fetch("https://onesignal.com/api/v1/notifications", options);
+      const data = await response.json();
 
-    setUserId(data.id);
-    setStatus(`OK: ${data.full_name ?? data.email}`);
-  }
+      if (!data.id) throw new Error("Error en OneSignal");
 
-  async function send() {
-    setStatus("");
-    if (!title.trim()) return setStatus("Pon un título.");
-    if (!body.trim()) return setStatus("Escribe el mensaje.");
+      // 2. Guardar en SUPABASE (Para que se quede en la campanita)
+      const { error: dbError } = await supabase
+        .from("notifications")
+        .insert([{ title, message, target_role: "all" }]);
 
-    let targetUserId = null;
+      if (dbError) throw dbError;
 
-    if (mode === "one") {
-      if (!userId) return setStatus("Primero resuelve el email (Buscar).");
-      targetUserId = userId;
+      // Éxito total
+      setStatus("success");
+      setTitle("");
+      setMessage("");
+
+    } catch (error) {
+      console.error("Error:", error);
+      setStatus("error");
+    } finally {
+      setLoading(false);
     }
-
-    setStatus("Enviando…");
-
-    const { error } = await supabase.from("notifications").insert({
-      user_id: targetUserId, // null = a todos
-      title: title.trim(),
-      body: body.trim(),
-    });
-
-    if (error) return setStatus("Error: " + error.message);
-
-    setBody("");
-    setStatus("✅ Notificación enviada.");
-  }
+  };
 
   return (
-    <div style={{ maxWidth: 640, margin: "0 auto" }}>
-      <h2>Staff · Notificaciones</h2>
+    <div className="card-container">
+      <h2>📢 Nueva Notificación</h2>
+      <p style={{ color: "#666", marginBottom: "20px" }}>
+        Se enviará al celular y se guardará en la campanita.
+      </p>
 
-      <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginBottom: 12 }}>
-        <button onClick={() => setMode("all")} style={{ fontWeight: mode === "all" ? 900 : 600 }}>
-          A todos
-        </button>
-        <button onClick={() => setMode("one")} style={{ fontWeight: mode === "one" ? 900 : 600 }}>
-          A 1 usuario
-        </button>
-      </div>
-
-      {mode === "one" && (
-        <div style={{ display: "flex", gap: 8, alignItems: "center", marginBottom: 12 }}>
-          <input
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            placeholder="email@tec.mx"
-            style={{ flex: 1, padding: 10, borderRadius: 10, border: "1px solid #ccc" }}
-          />
-          <button onClick={resolveUser}>Buscar</button>
-        </div>
-      )}
-
-      <div style={{ display: "grid", gap: 10 }}>
+      <form onSubmit={handleSendNotification} style={{ display: "flex", flexDirection: "column", gap: "15px" }}>
         <input
+          type="text"
+          placeholder="Título (Ej: Aviso Urgente)"
           value={title}
           onChange={(e) => setTitle(e.target.value)}
-          placeholder="Título"
-          style={{ padding: 10, borderRadius: 10, border: "1px solid #ccc" }}
+          required
+          style={{ padding: "10px", borderRadius: "5px", border: "1px solid #ccc" }}
         />
-
         <textarea
-          value={body}
-          onChange={(e) => setBody(e.target.value)}
-          placeholder="Mensaje…"
-          rows={4}
-          style={{ padding: 10, borderRadius: 10, border: "1px solid #ccc" }}
+          placeholder="Mensaje..."
+          value={message}
+          onChange={(e) => setMessage(e.target.value)}
+          required
+          rows="3"
+          style={{ padding: "10px", borderRadius: "5px", border: "1px solid #ccc" }}
         />
-
-        <button onClick={send} style={{ padding: 12, borderRadius: 12, fontWeight: 900 }}>
-          Enviar
+        <button 
+          type="submit" 
+          disabled={loading}
+          style={{ 
+            backgroundColor: loading ? "#ccc" : "#2a2f58", 
+            color: "white", padding: "12px", border: "none", borderRadius: "5px", fontWeight: "bold"
+          }}
+        >
+          {loading ? "Enviando..." : "Enviar a Todos"}
         </button>
+      </form>
 
-        {status && <div style={{ marginTop: 6 }}>{status}</div>}
-      </div>
-
-      <p style={{ marginTop: 14, opacity: 0.8, fontSize: 12 }}>
-        Nota: “A todos” inserta notifications con user_id = NULL.
-      </p>
+      {status === "success" && <div style={{ marginTop: "15px", color: "green" }}>✅ ¡Enviado y Guardado!</div>}
+      {status === "error" && <div style={{ marginTop: "15px", color: "red" }}>❌ Error al enviar.</div>}
     </div>
   );
 }
-

@@ -97,3 +97,34 @@
     flex-wrap: wrap;
   }
 }
+
+/* === CORRECCIÓN DE CAMPANITA EN MÓVIL === */
+
+/* Asegura que el contenedor de la campana sea la referencia */
+.notification-container { 
+  position: relative; 
+}
+
+/* Estilo para el menú desplegable */
+.notifications-dropdown {
+  position: absolute;
+  top: 100%;       /* Justo debajo de la campana */
+  right: 0;        /* Alineado a la derecha de la pantalla/padre */
+  width: 300px;    /* Ancho normal para PC */
+  
+  /* TRUCO PARA MÓVIL: */
+  max-width: 90vw; /* Que nunca sea más ancho que el 90% de la pantalla */
+  z-index: 1000;   /* Que flote sobre todo lo demás */
+  background: white;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+  overflow: hidden;
+}
+
+/* Ajuste fino extra para pantallas muy pequeñas */
+@media (max-width: 480px) {
+  .notifications-dropdown {
+    right: -60px; /* Un pequeño empujón si se corta a la derecha */
+    width: 85vw;
+  }
+}
