@@ -5,7 +5,7 @@ export async function onRequestPost(context) {
 
     // TU CLAVE MAESTRA ESTÁ AQUÍ 👇
     // Fíjate que dice "Basic " seguido de tu clave k7gby...
-    const ONESIGNAL_REST_API_KEY = "Basic k7gby5rchedmfbvo5ey2zyao4";
+    const ONESIGNAL_REST_API_KEY = "Basic os_v2_app_z4hzbumus5bwpnja7q4xnuxxzox25reyqnyuejegwyakymgz42saj2hh2ob3qbggurtqldxnphoe2bxc5mx4vjng72younindglp6ca";
 
     const response = await fetch('https://onesignal.com/api/v1/notifications', {
       method: 'POST',
