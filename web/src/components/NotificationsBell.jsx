@@ -4,129 +4,78 @@ import { supabase } from "../lib/supabase";
 export default function NotificationsBell() {
   const [open, setOpen] = useState(false);
   const [items, setItems] = useState([]);
-  const [unread, setUnread] = useState(0);
-
-  function computeUnread(list, uid) {
-    return (list ?? []).filter((n) => n.user_id === uid && !n.read).length;
-  }
-
+  
+  // Cargamos las notificaciones
   async function load() {
-    const { data: me } = await supabase.auth.getUser();
-    const uid = me?.user?.id;
-    if (!uid) return;
-
+    // Seleccionamos las columnas correctas de la nueva tabla
     const { data, error } = await supabase
       .from("notifications")
-      .select("id,title,body,read,created_at,user_id")
-      .or(`user_id.eq.${uid},user_id.is.null`)
+      .select("id, title, message, created_at") 
       .order("created_at", { ascending: false })
       .limit(20);
 
     if (error) {
-      console.log("NOTIFS ERROR:", error.message);
+      console.log("Error cargando notifs:", error.message);
       return;
     }
 
-    const list = data ?? [];
-    setItems(list);
-    setUnread(computeUnread(list, uid));
-  }
-
-  async function markAllRead() {
-    const { data: me } = await supabase.auth.getUser();
-    const uid = me?.user?.id;
-    if (!uid) return;
-
-    const ids = (items ?? []).filter((n) => n.user_id === uid && !n.read).map((n) => n.id);
-    if (ids.length === 0) return setOpen(false);
-
-    const { error } = await supabase
-      .from("notifications")
-      .update({ read: true })
-      .in("id", ids);
-
-    if (error) console.log("MARK READ ERROR:", error.message);
-
-    await load();
-    setOpen(false);
+    setItems(data ?? []);
   }
 
   useEffect(() => {
-    let channel;
+    load();
 
-    (async () => {
-      await load();
-
-      const { data: me } = await supabase.auth.getUser();
-      const uid = me?.user?.id;
-      if (!uid) return;
-
-      channel = supabase
-        .channel("notif-" + uid)
-        .on(
-          "postgres_changes",
-          { event: "INSERT", schema: "public", table: "notifications", filter: `user_id=eq.${uid}` },
-          (payload) => {
-            const n = payload.new;
-            setItems((prev) => {
-              const next = [n, ...(prev ?? [])].slice(0, 20);
-              setUnread(computeUnread(next, uid));
-              return next;
-            });
-          }
-        )
-        .on(
-          "postgres_changes",
-          { event: "INSERT", schema: "public", table: "notifications", filter: `user_id=is.null` },
-          (payload) => {
-            const n = payload.new;
-            setItems((prev) => {
-              const next = [n, ...(prev ?? [])].slice(0, 20);
-              setUnread(computeUnread(next, uid));
-              return next;
-            });
-          }
-        )
-        .subscribe();
-    })();
+    // Suscripción en tiempo real para que aparezca el puntito rojo al instante
+    const channel = supabase
+      .channel("public-notifs")
+      .on(
+        "postgres_changes",
+        { event: "INSERT", schema: "public", table: "notifications" },
+        (payload) => {
+          setItems((prev) => [payload.new, ...prev].slice(0, 20));
+        }
+      )
+      .subscribe();
 
     return () => {
-      if (channel) supabase.removeChannel(channel);
+      supabase.removeChannel(channel);
     };
   }, []);
 
   return (
     <div style={{ position: "relative" }}>
       <button
-        onClick={() => setOpen((v) => !v)}
+        onClick={() => setOpen(!open)}
         style={{
-          position: "relative",
           border: "1px solid #cacbd3",
           background: "transparent",
           color: "#cacbd3",
-          borderRadius: 999,
-          padding: "6px 10px",
+          borderRadius: "50%",
+          width: "40px",
+          height: "40px",
           cursor: "pointer",
+          display: "flex", 
+          alignItems: "center", 
+          justifyContent: "center",
+          fontSize: "20px"
         }}
         title="Notificaciones"
       >
         🔔
-        {unread > 0 && (
+        {/* Si hay items, mostramos un puntito rojo simple */}
+        {items.length > 0 && (
           <span
             style={{
               position: "absolute",
-              top: -6,
-              right: -6,
+              top: 0,
+              right: 0,
+              width: "12px",
+              height: "12px",
               background: "#bc3f4a",
-              color: "white",
-              borderRadius: 999,
-              padding: "2px 6px",
-              fontSize: 12,
-              fontWeight: 700,
+              borderRadius: "50%",
+              border: "2px solid white"
             }}
-          >
-            {unread}
-          </span>
+          />
         )}
       </button>
 
@@ -135,39 +84,45 @@ export default function NotificationsBell() {
           style={{
             position: "absolute",
             right: 0,
-            top: "110%",
+            top: "120%",
             width: 320,
             background: "#2a2f58",
             borderRadius: 14,
-            padding: 12,
-            color: "#cacbd3",
-            boxShadow: "0 12px 28px rgba(0,0,0,.35)",
-            zIndex: 50,
+            padding: 15,
+            color: "white",
+            boxShadow: "0 10px 40px rgba(0,0,0,0.5)",
+            zIndex: 100,
+            border: "1px solid rgba(255,255,255,0.1)"
           }}
         >
-          <div style={{ display: "flex", justifyContent: "space-between" }}>
-            <b>Notificaciones</b>
-            <button onClick={markAllRead}>Marcar leídas</button>
+          <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 10 }}>
+            <b style={{fontSize: "16px"}}>📢 Últimos avisos</b>
+            <button 
+                onClick={() => setOpen(false)} 
+                style={{background:"none", border:"none", color:"#aaa", cursor:"pointer"}}>
+                ✕
+            </button>
           </div>
 
-          <div style={{ marginTop: 10, display: "grid", gap: 10 }}>
-            {items.length === 0 && <div>Sin notificaciones.</div>}
+          <div style={{ display: "flex", flexDirection: "column", gap: 10, maxHeight: "300px", overflowY: "auto" }}>
+            {items.length === 0 && <div style={{color: "#aaa", textAlign: "center", padding: "20px"}}>No hay notificaciones recientes.</div>}
+            
             {items.map((n) => (
               <div
                 key={n.id}
                 style={{
-                  padding: 10,
-                  borderRadius: 12,
-                  background:
-                    n.user_id
-                      ? n.read
-                        ? "rgba(255,255,255,.05)"
-                        : "rgba(188,63,74,.10)"
-                      : "rgba(255,255,255,.06)",
+                  padding: "12px",
+                  borderRadius: 8,
+                  background: "rgba(255,255,255,0.1)",
+                  borderLeft: "4px solid #4CAF50"
                 }}
               >
-                <div style={{ fontWeight: 800 }}>{n.title}</div>
-                <div style={{ fontSize: 14 }}>{n.body}</div>
+                <div style={{ fontWeight: "bold", fontSize: "14px", marginBottom: "4px" }}>{n.title}</div>
+                {/* Aquí usamos n.message en vez de n.body */}
+                <div style={{ fontSize: "13px", color: "#ddd", lineHeight: "1.4" }}>{n.message}</div>
+                <div style={{ fontSize: "10px", color: "#aaa", marginTop: "5px", textAlign: "right" }}>
+                    {new Date(n.created_at).toLocaleDateString()}
+                </div>
               </div>
             ))}
           </div>

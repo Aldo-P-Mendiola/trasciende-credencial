@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef } from "react"; // <--- SOLUCIÓN: Todo en una sola línea
+import { useEffect, useState, useRef } from "react"; 
 import { Routes, Route, Link, Navigate, useLocation } from "react-router-dom";
 import { supabase } from "./lib/supabase";
 import "./App.css";
@@ -17,6 +17,7 @@ import OneSignal from 'react-onesignal';
 export default function App() {
   const [session, setSession] = useState(null);
   const [role, setRole] = useState("student");
+  const [isSubscribed, setIsSubscribed] = useState(false); // <--- NUEVO: Estado de suscripción
   const location = useLocation();
 
   // CANDADO PARA ONESIGNAL (Para que no se inicie 2 veces)
@@ -34,17 +35,27 @@ export default function App() {
   // 2. Efecto para iniciar OneSignal (Solo una vez)
   useEffect(() => {
     async function runOneSignal() {
-      if (oneSignalInitialized.current) return; // Si ya corrió, detente
-      oneSignalInitialized.current = true; // Marca que ya corrió
+      if (oneSignalInitialized.current) return; 
+      oneSignalInitialized.current = true; 
 
       try {
         await OneSignal.init({
           appId: "cf0f90d1-9497-4367-b520-fc3976d2f7cb", 
           allowLocalhostAsSecureOrigin: true,
           notifyButton: {
-            enable: true,
+            enable: true, // Esto habilita la campanita nativa de OneSignal también
           },
         });
+
+        // --- LÓGICA DEL BOTÓN ROJO ---
+        // Verificamos si ya está suscrito al cargar
+        setIsSubscribed(OneSignal.Notifications.permission);
+        
+        // Escuchamos si el usuario cambia de opinión en tiempo real
+        OneSignal.Notifications.addEventListener("change", (permission) => {
+          setIsSubscribed(permission);
+        });
+
       } catch (error) {
         console.error("Error al iniciar OneSignal:", error);
       }
@@ -57,7 +68,6 @@ export default function App() {
     (async () => {
       if (!session?.user?.id) return;
 
-      // Buscamos el rol en Supabase
       const { data } = await supabase
         .from("profiles")
         .select("role")
@@ -67,10 +77,11 @@ export default function App() {
       const userRole = data?.role ?? "student"; 
       setRole(userRole);
 
-      // --- ETIQUETADO AUTOMÁTICO EN ONESIGNAL ---
       try {
-        OneSignal.User.addTag("tipo_usuario", userRole);
-        console.log(`🏷️ [OneSignal] Usuario etiquetado como: ${userRole}`);
+        if (OneSignal.User) {
+            OneSignal.User.addTag("tipo_usuario", userRole);
+            console.log(`🏷️ [OneSignal] Usuario etiquetado como: ${userRole}`);
+        }
       } catch (error) {
         console.error("Error al etiquetar en OneSignal:", error);
       }
@@ -109,20 +120,25 @@ export default function App() {
             </>
           )}
 
-<button 
-  onClick={() => OneSignal.Slidedown.promptPush()}
-  style={{
-    padding: "15px", 
-    backgroundColor: "#e02424", 
-    color: "white", 
-    borderRadius: "8px", 
-    margin: "20px",
-    zIndex: 9999,
-    position: "relative"
-  }}
->
-  🔔 ACTIVAR NOTIFICACIONES (CLICK AQUÍ)
-</button>
+          {/* 👇 AQUÍ ESTÁ EL CAMBIO: Solo mostramos si NO está suscrito (!isSubscribed) */}
+          {!isSubscribed && (
+            <button 
+              onClick={() => OneSignal.Slidedown.promptPush()}
+              style={{
+                padding: "10px 15px", 
+                backgroundColor: "#e02424", 
+                color: "white", 
+                borderRadius: "8px", 
+                marginLeft: "15px",
+                border: "none",
+                cursor: "pointer",
+                fontWeight: "bold",
+                fontSize: "0.9rem"
+              }}
+            >
+              🔔 ACTIVAR AVISOS
+            </button>
+          )}
 
           {/* Iconos finales */}
           <NotificationsBell />

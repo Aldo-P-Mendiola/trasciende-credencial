@@ -53,7 +53,7 @@ export default function Events() {
     e.preventDefault();
     if (!newEvent.title || !newEvent.start_time) return alert("Faltan datos");
 
-    // 1. Crear el Evento
+    // 1. Crear el Evento en la Base de Datos
     const { data: eventData, error: eventError } = await supabase
       .from("events")
       .insert({
@@ -69,12 +69,37 @@ export default function Events() {
     if (eventError) {
       alert("Error al crear evento: " + eventError.message);
     } else {
-      // 2. ¡ÉXITO! Ahora enviamos la notificación PUSH a todos (user_id: null)
-      await supabase.from("notifications").insert({
-        user_id: null, // null significa "Para todos"
-        title: "Nuevo Evento: " + newEvent.title,
-        body: `Gana ${newEvent.points} pts en ${newEvent.location}. ¡Te esperamos!`,
+      
+      // --- 2. AUTOMATIZACIÓN DE NOTIFICACIONES ---
+      const notifTitle = "📅 Nuevo Evento: " + newEvent.title;
+      const notifMessage = `Gana ${newEvent.points} pts en ${newEvent.location}. ¡Te esperamos!`;
+
+      // A) Enviar PUSH al celular (Usando tu Worker /notify)
+      try {
+        await fetch("/notify", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              app_id: "cf0f90d1-9497-4367-b520-fc3976d2f7cb", // Tu App ID
+              included_segments: ["All"],
+              headings: { en: notifTitle },
+              contents: { en: notifMessage },
+            }),
+        });
+        console.log("Push enviado correctamente");
+      } catch (err) {
+        console.error("Error enviando push automático", err);
+      }
+
+      // B) Guardar en HISTORIAL de la Campanita (Tabla notifications)
+      // Usamos las columnas nuevas: title, message, target_role
+      const { error: notifDbError } = await supabase.from("notifications").insert({
+        title: notifTitle,
+        message: notifMessage,
+        target_role: "all" 
       });
+
+      if(notifDbError) console.error("Error guardando en historial:", notifDbError);
 
       alert("✅ Evento creado y notificación enviada a todos.");
       setShowForm(false);
@@ -152,7 +177,7 @@ export default function Events() {
             </div>
 
             <button type="submit" className="btn-action" style={{ marginTop: 10 }}>
-              Guardar Evento
+              Guardar Evento y Notificar
             </button>
           </form>
         </div>
