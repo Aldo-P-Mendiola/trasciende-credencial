@@ -5,7 +5,7 @@ export default function NotificationsBell() {
   const [open, setOpen] = useState(false);
   const [items, setItems] = useState([]);
   
-  // Referencia para detectar clicks fuera y cerrar
+  // Referencia para detectar clicks fuera y cerrar el menú
   const menuRef = useRef(null);
 
   async function load() {
@@ -60,7 +60,7 @@ export default function NotificationsBell() {
           justifyContent: "center",
           fontSize: "20px",
           position: "relative",
-          zIndex: 1001 // Botón por encima del resto del header
+          zIndex: 1001 // Asegura que el botón flote sobre lo demás
         }}
         title="Notificaciones"
       >
@@ -85,19 +85,21 @@ export default function NotificationsBell() {
         <div
           style={{
             position: "absolute",
-            right: -5, // Alineado a la derecha
-            top: "55px", // Un poco separado del botón
+            // TRUCO PARA ANDROID:
+            // Movemos la caja a la derecha (-70px) para que no se corte a la izquierda.
+            right: "-70px", 
+            top: "55px",
             
-            // --- FIX ANDROID ---
-            // El ancho se adapta: Máximo 300px, pero en cels usa el 85% de la pantalla
-            width: "min(300px, 85vw)", 
+            // ANCHO RESPONSIVO:
+            // Usa 320px si cabe, si no, usa el 90% de la pantalla del cel.
+            width: "min(320px, 90vw)", 
             
             background: "#2a2f58",
             borderRadius: 16,
             padding: 0, 
             color: "white",
-            boxShadow: "0 15px 50px rgba(0,0,0,0.6)",
-            zIndex: 9999, // MÁS ARRIBA QUE TODO
+            boxShadow: "0 15px 50px rgba(0,0,0,0.6)", // Sombra fuerte para que resalte
+            zIndex: 9999,
             border: "1px solid rgba(255,255,255,0.15)",
             overflow: "hidden",
             display: "flex",
@@ -125,7 +127,7 @@ export default function NotificationsBell() {
           <div style={{ 
             display: "flex", 
             flexDirection: "column", 
-            maxHeight: "50vh", // Altura controlada
+            maxHeight: "50vh", // Que no ocupe más de la mitad de la pantalla de alto
             overflowY: "auto" 
           }}>
             {items.length === 0 && (
@@ -143,29 +145,30 @@ export default function NotificationsBell() {
                   background: "transparent",
                   display: "flex",
                   flexDirection: "column",
-                  gap: "5px"
+                  gap: "6px"
                 }}
               >
                 <div style={{ 
                   fontWeight: "bold", 
                   fontSize: "14px", 
                   color: "#fff",
-                  lineHeight: "1.2"
+                  lineHeight: "1.3"
                 }}>
                   {n.title}
                 </div>
                 
-                {/* --- FIX TEXTO ENCIMADO --- */}
+                {/* Texto del mensaje: word-break evita que se salga del contenedor */}
                 <div style={{ 
                   fontSize: "13px", 
                   color: "#ddd", 
-                  lineHeight: "1.5", // Importante: altura de línea para que respiren las letras
-                  wordBreak: "break-word", // Corta palabras largas si es necesario
-                  whiteSpace: "pre-wrap" // Respeta párrafos
+                  lineHeight: "1.5", 
+                  wordBreak: "break-word", 
+                  whiteSpace: "pre-wrap" 
                 }}>
                   {n.message}
                 </div>
                 
+                {/* Fecha y Hora (Formato 24h) */}
                 <div style={{ 
                   fontSize: "11px", 
                   color: "#aaa", 
@@ -173,7 +176,9 @@ export default function NotificationsBell() {
                   textAlign: "right" 
                 }}>
                   {new Date(n.created_at).toLocaleDateString("es-MX", {
-                    day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit'
+                    day: 'numeric', month: 'short', 
+                    hour: '2-digit', minute: '2-digit', 
+                    hour12: false 
                   })}
                 </div>
               </div>

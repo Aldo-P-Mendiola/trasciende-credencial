@@ -17,19 +17,16 @@ export default function Credencial() {
       const { data: u } = await supabase.auth.getUser();
       const me = u?.user;
       
-      if (!me) { 
-        setLoading(false); 
-        return; 
-      }
+      if (!me) { setLoading(false); return; }
 
-      // 1. Generar QR
+      // 1. QR
       try {
         const payload = JSON.stringify({ userId: me.id });
         const url = await QRCode.toDataURL(payload, { margin: 1, scale: 8, color: { dark: "#2a2f58", light: "#ffffff" } });
         setQr(url);
       } catch (e) { console.log("QR ERROR:", e); }
 
-      // 2. Datos del Perfil y Puntos
+      // 2. Datos
       const { data: p } = await supabase.from("profiles").select("full_name, email, role").eq("id", me.id).single();
       const { data: pts } = await supabase.from("v_user_points").select("points").eq("user_id", me.id).maybeSingle();
 
@@ -40,7 +37,7 @@ export default function Credencial() {
         points: pts?.points ?? 0,
       });
 
-      // 3. Cargar Historial
+      // 3. Historial
       try {
         const { data: historyData } = await supabase
           .from("attendance")
@@ -49,15 +46,13 @@ export default function Credencial() {
           .order("scanned_at", { ascending: false });
         
         setHistory(historyData || []);
-      } catch (error) {
-        console.error("Error cargando historial", error);
-      }
+      } catch (error) { console.error("Error historial", error); }
 
       setLoading(false);
     })();
   }, []);
 
-  // Lógica de realtime
+  // Realtime
   useEffect(() => {
     let channel = null;
     (async () => {
@@ -96,17 +91,16 @@ export default function Credencial() {
     finally { setDownloading(false); }
   }
 
-  // Estilos (Modificados para responsividad)
   const cardStyle = {
     background: "linear-gradient(135deg, #2a2f58 0%, #181b36 100%)",
     color: "white",
     borderRadius: "20px",
     padding: "24px",
     boxShadow: "0 20px 50px rgba(0,0,0,0.2)",
-    maxWidth: "100%", // Asegura que no se salga del ancho
+    maxWidth: "100%", 
     margin: "0 auto",
-    display: "flex",     // Cambié grid por flex para mejor control móvil
-    flexDirection: "column", // En móvil se ve mejor uno abajo del otro, en PC lo ajustamos
+    display: "flex",     
+    flexDirection: "column", 
     gap: "24px",
     border: "1px solid rgba(255,255,255,0.1)",
     position: "relative",
@@ -114,14 +108,7 @@ export default function Credencial() {
   };
 
   return (
-    <div style={{ 
-      maxWidth: 600, 
-      margin: "0 auto", 
-      padding: "20px",
-      // FIX ANDROID: Espacio extra abajo y altura mínima
-      paddingBottom: "120px", 
-      minHeight: "100vh" 
-    }}>
+    <div style={{ maxWidth: 600, margin: "0 auto", padding: "20px", paddingBottom: "120px", minHeight: "100vh" }}>
       
       {/* Header */}
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
@@ -131,110 +118,62 @@ export default function Credencial() {
         </button>
       </div>
 
-      {/* TARJETA (Lo que se descarga) */}
+      {/* TARJETA */}
       <div id="credencial-card" style={cardStyle}>
-        
-        {/* Decoración fondo */}
-        <div style={{
-          position: "absolute", top: -50, right: -50, width: 200, height: 200, 
-          background: "rgba(188, 63, 74, 0.4)", filter: "blur(60px)", borderRadius: "50%" 
-        }} />
+        <div style={{ position: "absolute", top: -50, right: -50, width: 200, height: 200, background: "rgba(188, 63, 74, 0.4)", filter: "blur(60px)", borderRadius: "50%" }} />
 
-        {/* Contenedor Flex para Desktop (row) y Móvil (column) */}
         <div style={{ display: "flex", flexDirection: "row", flexWrap: "wrap", justifyContent: "space-between", gap: "20px" }}>
-            
-            {/* Datos Alumno */}
             <div style={{ zIndex: 1, flex: 1, minWidth: "200px" }}>
-              <div style={{ textTransform: "uppercase", letterSpacing: "2px", fontSize: "0.75rem", opacity: 0.7, marginBottom: 4 }}>
-                Programa Trasciende
-              </div>
-              <div style={{ fontSize: "1.75rem", fontWeight: 800, lineHeight: 1.2 }}>
-                {loading ? "Cargando..." : profile?.full_name}
-              </div>
-              <div style={{ fontSize: "0.9rem", opacity: 0.8, marginTop: 4 }}>
-                {loading ? "..." : profile?.email}
-              </div>
+              <div style={{ textTransform: "uppercase", letterSpacing: "2px", fontSize: "0.75rem", opacity: 0.7, marginBottom: 4 }}>Programa Trasciende</div>
+              <div style={{ fontSize: "1.75rem", fontWeight: 800, lineHeight: 1.2 }}>{loading ? "Cargando..." : profile?.full_name}</div>
+              <div style={{ fontSize: "0.9rem", opacity: 0.8, marginTop: 4 }}>{loading ? "..." : profile?.email}</div>
 
               <div style={{ marginTop: 24 }}>
-                <span style={{ display: "inline-block", padding: "6px 12px", background: "rgba(255,255,255,0.1)", borderRadius: "8px", fontSize: "0.85rem", marginRight: 10, marginBottom: 5 }}>
-                    Rol: <b>{profile?.role}</b>
-                </span>
-                <span style={{ display: "inline-block", padding: "6px 12px", background: "#bc3f4a", borderRadius: "8px", fontSize: "0.85rem", fontWeight: "bold" }}>
-                    Puntos: {profile?.points ?? 0} 🏆
-                </span>
+                <span style={{ display: "inline-block", padding: "6px 12px", background: "rgba(255,255,255,0.1)", borderRadius: "8px", fontSize: "0.85rem", marginRight: 10, marginBottom: 5 }}>Rol: <b>{profile?.role}</b></span>
+                <span style={{ display: "inline-block", padding: "6px 12px", background: "#bc3f4a", borderRadius: "8px", fontSize: "0.85rem", fontWeight: "bold" }}>Puntos: {profile?.points ?? 0} 🏆</span>
               </div>
-
-              <div style={{ marginTop: 24, fontSize: "0.75rem", opacity: 0.6 }}>
-                Tecnológico de Monterrey • CCM
-              </div>
+              <div style={{ marginTop: 24, fontSize: "0.75rem", opacity: 0.6 }}>Tecnológico de Monterrey • CCM</div>
             </div>
 
-            {/* QR - FIX ANDROID: maxWidth 100% */}
-            <div style={{ 
-                zIndex: 1, 
-                background: "white", 
-                padding: "10px", 
-                borderRadius: "16px", 
-                display: "flex", 
-                justifyContent: "center", 
-                alignItems: "center",
-                alignSelf: "center" // Centrado vertical si es flex
-            }}>
+            <div style={{ zIndex: 1, background: "white", padding: "10px", borderRadius: "16px", display: "flex", justifyContent: "center", alignItems: "center", alignSelf: "center" }}>
               {qr && <img src={qr} alt="QR" style={{ width: "140px", height: "auto", maxWidth: "100%", display: "block" }} />}
             </div>
         </div>
       </div>
 
-      <p style={{ textAlign: "center", marginTop: 20, color: "#888", fontSize: "0.9rem", marginBottom: 30 }}>
-        Muestra este código al Staff para registrar asistencia.
-      </p>
+      <p style={{ textAlign: "center", marginTop: 20, color: "#888", fontSize: "0.9rem", marginBottom: 30 }}>Muestra este código al Staff para registrar asistencia.</p>
 
-      {/* === HISTORIAL DE EVENTOS === */}
+      {/* === HISTORIAL (24 HORAS) === */}
       <div>
         <h3 style={{ color: "#2a2f58", marginBottom: 15 }}>Mis Eventos Asistidos</h3>
-        
         {history.length === 0 ? (
-          <div style={{ textAlign: "center", padding: 20, background: "#f9f9f9", borderRadius: 12, color: "#888" }}>
-            Aún no has registrado asistencia.
-          </div>
+          <div style={{ textAlign: "center", padding: 20, background: "#f9f9f9", borderRadius: 12, color: "#888" }}>Aún no has registrado asistencia.</div>
         ) : (
           <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
             {history.map((item, index) => (
               <div key={index} style={{
-                background: "white",
-                padding: "16px",
-                borderRadius: "12px",
-                boxShadow: "0 2px 8px rgba(0,0,0,0.04)",
-                border: "1px solid #f0f0f0",
-                display: "flex",
-                justifyContent: "space-between",
-                alignItems: "center"
+                background: "white", padding: "16px", borderRadius: "12px", boxShadow: "0 2px 8px rgba(0,0,0,0.04)", border: "1px solid #f0f0f0",
+                display: "flex", justifyContent: "space-between", alignItems: "center"
               }}>
                 <div>
-                  <strong style={{ display: "block", fontSize: "0.95rem", color: "#333" }}>
-                    {item.events?.title || "Evento"}
-                  </strong>
+                  <strong style={{ display: "block", fontSize: "0.95rem", color: "#333" }}>{item.events?.title || "Evento"}</strong>
                   <span style={{ fontSize: "0.75rem", color: "#888" }}>
-                    {new Date(item.scanned_at).toLocaleDateString()} • {new Date(item.scanned_at).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
+                    
+                    {/* CAMBIO: Formato 24h aquí también */}
+                    {new Date(item.scanned_at).toLocaleDateString()} • {new Date(item.scanned_at).toLocaleTimeString([], {
+                        hour: '2-digit', 
+                        minute:'2-digit', 
+                        hour12: false // <--- 24H
+                    })}
+
                   </span>
                 </div>
-                <div style={{ 
-                  color: "#166534", 
-                  background: "#dcfce7", 
-                  padding: "4px 8px", 
-                  borderRadius: "20px", 
-                  fontSize: "0.8rem", 
-                  fontWeight: "bold",
-                  whiteSpace: "nowrap"
-                }}>
-                  +{item.events?.points} pts
-                </div>
+                <div style={{ color: "#166534", background: "#dcfce7", padding: "4px 8px", borderRadius: "20px", fontSize: "0.8rem", fontWeight: "bold", whiteSpace: "nowrap" }}>+{item.events?.points} pts</div>
               </div>
             ))}
           </div>
         )}
       </div>
-
     </div>
   );
 }
