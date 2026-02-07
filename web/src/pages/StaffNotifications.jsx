@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { supabase } from "../lib/supabase"; // <--- Importamos Supabase
+import { supabase } from "../lib/supabase"; 
 import "../App.css";
 
 export default function StaffNotifications() {
@@ -8,9 +8,8 @@ export default function StaffNotifications() {
   const [loading, setLoading] = useState(false);
   const [status, setStatus] = useState(null);
 
-  // TUS CLAVES
+  // Tu App ID (este sí se puede quedar aquí, es público)
   const ONESIGNAL_APP_ID = "cf0f90d1-9497-4367-b520-fc3976d2f7cb"; 
-  //const ONESIGNAL_REST_API_KEY = "k7gby5rchedmfbvo5ey2zyao4"; // <--- ¡OJO! Pega tu Key aquí de nuevo
 
   const handleSendNotification = async (e) => {
     e.preventDefault();
@@ -18,27 +17,32 @@ export default function StaffNotifications() {
     setStatus(null);
 
     try {
-      // 1. Enviar PUSH a OneSignal (Para que suene el celular)
-      const options = {
+      // 1. Enviar PUSH usando tu TÚNEL (functions/notify.js)
+      // Nota el cambio en la URL: '/notify'
+      const response = await fetch("/notify", {
         method: "POST",
         headers: {
-          accept: "application/json",
           "Content-Type": "application/json",
+          // YA NO ponemos la Key aquí, la pone Cloudflare automáticamente
         },
         body: JSON.stringify({
           app_id: ONESIGNAL_APP_ID,
-          included_segments: ["All"],
+          included_segments: ["Subscribed Users"], // Cambié "All" por "Subscribed Users" que es más seguro, pero "All" funciona igual
           headings: { en: title },
           contents: { en: message },
         }),
-      };
+      });
 
-      const response = await fetch("https://onesignal.com/api/v1/notifications", options);
+      if (!response.ok) {
+        const errorData = await response.json();
+        console.error("Error del servidor:", errorData);
+        throw new Error("Falló el envío a OneSignal");
+      }
+
       const data = await response.json();
+      console.log("Éxito OneSignal:", data);
 
-      if (!data.id) throw new Error("Error en OneSignal");
-
-      // 2. Guardar en SUPABASE (Para que se quede en la campanita)
+      // 2. Guardar en SUPABASE (Historial)
       const { error: dbError } = await supabase
         .from("notifications")
         .insert([{ title, message, target_role: "all" }]);
@@ -51,7 +55,7 @@ export default function StaffNotifications() {
       setMessage("");
 
     } catch (error) {
-      console.error("Error:", error);
+      console.error("Error general:", error);
       setStatus("error");
     } finally {
       setLoading(false);
@@ -87,15 +91,15 @@ export default function StaffNotifications() {
           disabled={loading}
           style={{ 
             backgroundColor: loading ? "#ccc" : "#2a2f58", 
-            color: "white", padding: "12px", border: "none", borderRadius: "5px", fontWeight: "bold"
+            color: "white", padding: "12px", border: "none", borderRadius: "5px", fontWeight: "bold", cursor: loading ? "not-allowed" : "pointer"
           }}
         >
           {loading ? "Enviando..." : "Enviar a Todos"}
         </button>
       </form>
 
-      {status === "success" && <div style={{ marginTop: "15px", color: "green" }}>✅ ¡Enviado y Guardado!</div>}
-      {status === "error" && <div style={{ marginTop: "15px", color: "red" }}>❌ Error al enviar.</div>}
+      {status === "success" && <div style={{ marginTop: "15px", color: "green", fontWeight: "bold" }}>✅ ¡Enviado y Guardado!</div>}
+      {status === "error" && <div style={{ marginTop: "15px", color: "red", fontWeight: "bold" }}>❌ Error al enviar. (Checa consola)</div>}
     </div>
   );
 }
