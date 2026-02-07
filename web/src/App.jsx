@@ -16,86 +16,95 @@ import OneSignal from 'react-onesignal';
 
 export default function App() {
   const [session, setSession] = useState(null);
-  const [role, setRole] = useState("student");
-  const [isSubscribed, setIsSubscribed] = useState(false); // <--- NUEVO: Estado de suscripción
+  const [role, setRole] = useState(null); // Empezamos en null para no parpadear
+  const [loadingRole, setLoadingRole] = useState(true);
+  const [isSubscribed, setIsSubscribed] = useState(false);
   const location = useLocation();
 
-  // CANDADO PARA ONESIGNAL (Para que no se inicie 2 veces)
   const oneSignalInitialized = useRef(false);
 
-  // 1. Efecto para controlar la Sesión de Supabase
+  // 1. Sesión
   useEffect(() => {
-    supabase.auth.getSession().then(({ data }) => setSession(data.session));
+    supabase.auth.getSession().then(({ data }) => {
+      setSession(data.session);
+      if (!data.session) setLoadingRole(false);
+    });
     const { data: sub } = supabase.auth.onAuthStateChange(async (_event, s) => {
       setSession(s);
+      if (!s) setLoadingRole(false);
     });
     return () => sub.subscription.unsubscribe();
   }, []);
   
-  // 2. Efecto para iniciar OneSignal (Solo una vez)
-  useEffect(() => {
-    async function runOneSignal() {
-      if (oneSignalInitialized.current) return; 
-      oneSignalInitialized.current = true; 
-
-      try {
-        await OneSignal.init({
-          appId: "cf0f90d1-9497-4367-b520-fc3976d2f7cb", 
-          allowLocalhostAsSecureOrigin: true,
-          notifyButton: {
-            enable: true, // Esto habilita la campanita nativa de OneSignal también
-          },
-        });
-
-        // --- LÓGICA DEL BOTÓN ROJO ---
-        // Verificamos si ya está suscrito al cargar
-        setIsSubscribed(OneSignal.Notifications.permission);
-        
-        // Escuchamos si el usuario cambia de opinión en tiempo real
-        OneSignal.Notifications.addEventListener("change", (permission) => {
-          setIsSubscribed(permission);
-        });
-
-      } catch (error) {
-        console.error("Error al iniciar OneSignal:", error);
-      }
-    }
-    runOneSignal();
-  }, []);
-
-  // 3. Efecto para gestionar Roles y Etiquetas
+  // 2. Roles y Etiquetas
   useEffect(() => {
     (async () => {
       if (!session?.user?.id) return;
-
+      
+      // Leemos el rol de la base de datos
       const { data } = await supabase
         .from("profiles")
         .select("role")
         .eq("id", session.user.id)
         .single();
       
+      // Si no tiene rol, asumimos "student" (el más básico)
       const userRole = data?.role ?? "student"; 
       setRole(userRole);
+      setLoadingRole(false);
 
+      // Etiquetar en OneSignal
       try {
         if (OneSignal.User) {
-            OneSignal.User.addTag("tipo_usuario", userRole);
-            console.log(`🏷️ [OneSignal] Usuario etiquetado como: ${userRole}`);
+          OneSignal.User.addTag("tipo_usuario", userRole);
         }
-      } catch (error) {
-        console.error("Error al etiquetar en OneSignal:", error);
-      }
+      } catch (e) { console.error(e); }
 
     })();
   }, [session]);
-  
-  async function logout() {
-    await supabase.auth.signOut();
-  }
+
+  // 3. OneSignal (Igual que antes)
+  useEffect(() => {
+    async function runOneSignal() {
+      if (oneSignalInitialized.current) return; 
+      oneSignalInitialized.current = true; 
+      try {
+        await OneSignal.init({
+          appId: "cf0f90d1-9497-4367-b520-fc3976d2f7cb", 
+          allowLocalhostAsSecureOrigin: true,
+          notifyButton: { enable: true },
+        });
+        setIsSubscribed(OneSignal.Notifications.permission);
+        OneSignal.Notifications.addEventListener("change", (p) => setIsSubscribed(p));
+      } catch (error) { console.error(error); }
+    }
+    runOneSignal();
+  }, []);
+
+  async function logout() { await supabase.auth.signOut(); }
 
   if (!session) return <Login />;
+  if (loadingRole) return <div className="loading-screen">Cargando permisos...</div>;
 
-  const isStaff = role === "staff" || role === "admin";
+  // === DEFINICIÓN DE PERMISOS ===
+  const isAdmin = role === "admin";
+  const isStaff = role === "staff";
+  const isPartner = role === "partner";
+  const isStudent = role === "student";
+
+  // Grupos de acceso
+  // ¿Quién puede ver Eventos? Admin y Partners.
+  const canViewEvents = isAdmin || isPartner; 
+  
+  // ¿Quién puede ver Ranking? Admin, Staff y Partners.
+  const canViewRanking = isAdmin || isStaff || isPartner; 
+
+  // ¿Quién puede Escanear? Admin y Staff.
+  const canScan = isAdmin || isStaff;
+
+  // ¿Quién puede mandar Notificaciones/Ver Historial? SOLO EL REY (Admin)
+  // (Si quieres que el Staff también pueda, agrega "|| isStaff" aquí)
+  const canManage = isAdmin; 
 
   return (
     <div className="app-container">
@@ -105,42 +114,40 @@ export default function App() {
         </div>
 
         <nav className="main-nav">
-          {/* === MENÚ COMÚN === */}
+          {/* 1. CREDENCIAL: Todos la ven */}
           <Link to="/" className={location.pathname === "/" ? "nav-link active" : "nav-link"}>Credencial</Link>
-          <Link to="/events" className={location.pathname === "/events" ? "nav-link active" : "nav-link"}>Eventos</Link>
-          <Link to="/ranking" className={location.pathname === "/ranking" ? "nav-link active" : "nav-link"}>Ranking</Link>
+          
+          {/* 2. EVENTOS: Solo Admin y Partners */}
+          {canViewEvents && (
+            <Link to="/events" className={location.pathname === "/events" ? "nav-link active" : "nav-link"}>Eventos</Link>
+          )}
 
-          {/* === MENÚ STAFF === */}
-          {isStaff && (
+          {/* 3. RANKING: Admin, Staff y Partners */}
+          {canViewRanking && (
+            <Link to="/ranking" className={location.pathname === "/ranking" ? "nav-link active" : "nav-link"}>Ranking</Link>
+          )}
+
+          {/* === ZONA DE STAFF/ADMIN === */}
+          {(canScan || canManage) && <div className="divider-vertical"></div>}
+
+          {/* 4. ESCÁNER: Admin y Staff */}
+          {canScan && (
+            <Link to="/staff" className={location.pathname === "/staff" ? "nav-link active" : "nav-link"}>Scanner</Link>
+          )}
+
+          {/* 5. GESTIÓN (Historial/Notifs): Solo Admin */}
+          {canManage && (
             <>
-              <div className="divider-vertical"></div>
               <Link to="/admin-history" className={location.pathname === "/admin-history" ? "nav-link active" : "nav-link"}>Historial</Link>
-              <Link to="/staff" className={location.pathname === "/staff" ? "nav-link active" : "nav-link"}>Scanner</Link>
               <Link to="/staff-notifs" className={location.pathname === "/staff-notifs" ? "nav-link active" : "nav-link"}>Notifs</Link>
             </>
           )}
 
-          {/* 👇 AQUÍ ESTÁ EL CAMBIO: Solo mostramos si NO está suscrito (!isSubscribed) */}
+          {/* Botón Rojo OneSignal */}
           {!isSubscribed && (
-            <button 
-              onClick={() => OneSignal.Slidedown.promptPush()}
-              style={{
-                padding: "10px 15px", 
-                backgroundColor: "#e02424", 
-                color: "white", 
-                borderRadius: "8px", 
-                marginLeft: "15px",
-                border: "none",
-                cursor: "pointer",
-                fontWeight: "bold",
-                fontSize: "0.9rem"
-              }}
-            >
-              🔔 ACTIVAR AVISOS
-            </button>
+            <button onClick={() => OneSignal.Slidedown.promptPush()} className="btn-subs">🔔 ACTIVAR</button>
           )}
 
-          {/* Iconos finales */}
           <NotificationsBell />
           <button onClick={logout} className="btn-logout">Salir</button>
         </nav>
@@ -149,13 +156,14 @@ export default function App() {
       <main>
         <Routes>
           <Route path="/" element={<Credencial />} />
-          <Route path="/events" element={<Events />} />
-          <Route path="/ranking" element={<Ranking />} />
-
+          
           {/* Rutas Protegidas */}
-          <Route path="/admin-history" element={isStaff ? <AdminHistory /> : <Navigate to="/" />} />
-          <Route path="/staff" element={isStaff ? <StaffScan /> : <Navigate to="/" />} />
-          <Route path="/staff-notifs" element={isStaff ? <StaffNotifications /> : <Navigate to="/" />} />
+          <Route path="/events" element={canViewEvents ? <Events /> : <Navigate to="/" />} />
+          <Route path="/ranking" element={canViewRanking ? <Ranking /> : <Navigate to="/" />} />
+          
+          <Route path="/staff" element={canScan ? <StaffScan /> : <Navigate to="/" />} />
+          <Route path="/admin-history" element={canManage ? <AdminHistory /> : <Navigate to="/" />} />
+          <Route path="/staff-notifs" element={canManage ? <StaffNotifications /> : <Navigate to="/" />} />
           
           <Route path="*" element={<Navigate to="/" />} />
         </Routes>
