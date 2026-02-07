@@ -109,6 +109,21 @@ export default function App() {
             </>
           )}
 
+<button 
+  onClick={() => OneSignal.Slidedown.promptPush()}
+  style={{
+    padding: "15px", 
+    backgroundColor: "#e02424", 
+    color: "white", 
+    borderRadius: "8px", 
+    margin: "20px",
+    zIndex: 9999,
+    position: "relative"
+  }}
+>
+  🔔 ACTIVAR NOTIFICACIONES (CLICK AQUÍ)
+</button>
+
           {/* Iconos finales */}
           <NotificationsBell />
           <button onClick={logout} className="btn-logout">Salir</button>
