@@ -59,7 +59,8 @@ export default function NotificationsBell() {
           alignItems: "center", 
           justifyContent: "center",
           fontSize: "20px",
-          position: "relative"
+          position: "relative",
+          zIndex: 1001 // Botón por encima del resto del header
         }}
         title="Notificaciones"
       >
@@ -84,20 +85,23 @@ export default function NotificationsBell() {
         <div
           style={{
             position: "absolute",
-            right: -10, // Un poco más a la derecha para no cortarse en pantallas pequeñas
-            top: "130%",
-            // RESPONSIVIDAD: 
-            // Ancho fijo de 300px, PERO si la pantalla es más chica, usa el 90% del ancho
-            width: "300px", 
-            maxWidth: "85vw", 
+            right: -5, // Alineado a la derecha
+            top: "55px", // Un poco separado del botón
+            
+            // --- FIX ANDROID ---
+            // El ancho se adapta: Máximo 300px, pero en cels usa el 85% de la pantalla
+            width: "min(300px, 85vw)", 
+            
             background: "#2a2f58",
             borderRadius: 16,
-            padding: 0, // Quitamos padding general para controlar mejor
+            padding: 0, 
             color: "white",
-            boxShadow: "0 15px 50px rgba(0,0,0,0.6)", // Sombra fuerte para resaltar
-            zIndex: 9999, // Super encima de todo
+            boxShadow: "0 15px 50px rgba(0,0,0,0.6)",
+            zIndex: 9999, // MÁS ARRIBA QUE TODO
             border: "1px solid rgba(255,255,255,0.15)",
-            overflow: "hidden"
+            overflow: "hidden",
+            display: "flex",
+            flexDirection: "column"
           }}
         >
           {/* Header de la cajita */}
@@ -105,14 +109,14 @@ export default function NotificationsBell() {
             display: "flex", 
             justifyContent: "space-between", 
             alignItems: "center",
-            padding: "15px",
+            padding: "12px 15px",
             background: "rgba(0,0,0,0.2)",
             borderBottom: "1px solid rgba(255,255,255,0.1)"
           }}>
-            <b style={{fontSize: "15px"}}>📢 Avisos Recientes</b>
+            <b style={{fontSize: "14px"}}>📢 Avisos</b>
             <button 
                 onClick={() => setOpen(false)} 
-                style={{background:"none", border:"none", color:"#ccc", fontSize: "18px", cursor:"pointer"}}>
+                style={{background:"none", border:"none", color:"#ccc", fontSize: "16px", cursor:"pointer"}}>
                 ✕
             </button>
           </div>
@@ -121,12 +125,12 @@ export default function NotificationsBell() {
           <div style={{ 
             display: "flex", 
             flexDirection: "column", 
-            maxHeight: "60vh", // Máximo 60% de la altura del cel
+            maxHeight: "50vh", // Altura controlada
             overflowY: "auto" 
           }}>
             {items.length === 0 && (
               <div style={{color: "#aaa", textAlign: "center", padding: "30px"}}>
-                Todo tranquilo por aquí. 😴
+                Sin novedades.
               </div>
             )}
             
@@ -136,29 +140,36 @@ export default function NotificationsBell() {
                 style={{
                   padding: "15px",
                   borderBottom: "1px solid rgba(255,255,255,0.05)",
-                  background: "transparent"
+                  background: "transparent",
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: "5px"
                 }}
               >
                 <div style={{ 
                   fontWeight: "bold", 
-                  fontSize: "15px", 
-                  marginBottom: "5px",
-                  color: "#fff"
+                  fontSize: "14px", 
+                  color: "#fff",
+                  lineHeight: "1.2"
                 }}>
                   {n.title}
                 </div>
+                
+                {/* --- FIX TEXTO ENCIMADO --- */}
                 <div style={{ 
                   fontSize: "13px", 
                   color: "#ddd", 
-                  lineHeight: "1.5", // Espacio entre renglones para que no se encime
-                  whiteSpace: "pre-wrap" // Respeta los saltos de línea
+                  lineHeight: "1.5", // Importante: altura de línea para que respiren las letras
+                  wordBreak: "break-word", // Corta palabras largas si es necesario
+                  whiteSpace: "pre-wrap" // Respeta párrafos
                 }}>
                   {n.message}
                 </div>
+                
                 <div style={{ 
                   fontSize: "11px", 
                   color: "#aaa", 
-                  marginTop: "8px", 
+                  marginTop: "5px", 
                   textAlign: "right" 
                 }}>
                   {new Date(n.created_at).toLocaleDateString("es-MX", {
